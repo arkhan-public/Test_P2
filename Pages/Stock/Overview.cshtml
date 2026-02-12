@@ -1,0 +1,155 @@
+@page
+@model InventorySystem.Pages.Stock.OverviewModel
+@{
+    ViewData["Title"] = "Stock Overview";
+}
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="bi bi-box2"></i> Stock Overview</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="/Stock/AddStock" class="btn btn-success">
+            <i class="bi bi-plus-lg"></i> Add Stock
+        </a>
+        <a href="/Stock/RemoveStock" class="btn btn-warning">
+            <i class="bi bi-dash-lg"></i> Remove Stock
+        </a>
+    </div>
+</div>
+
+<div class="row mb-3">
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted">Total Products</h6>
+                <h3 class="card-text">@Model.TotalProducts</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted">Total Stock</h6>
+                <h3 class="card-text">@Model.TotalStock</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted">Low Stock Items</h6>
+                <h3 class="card-text text-danger">@Model.LowStockCount</h3>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-3">
+        <div class="card">
+            <div class="card-body text-center">
+                <h6 class="card-title text-muted">Out of Stock</h6>
+                <h3 class="card-text text-danger">@Model.OutOfStockCount</h3>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-2">
+                <div class="col-md-8">
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="Search by product name or SKU...">
+                </div>
+                <div class="col-md-2">
+                    <select name="filterType" class="form-select">
+                        <option value="">All Products</option>
+                        <option value="low" selected="@(Model.FilterType == "low")">Low Stock</option>
+                        <option value="out" selected="@(Model.FilterType == "out")">Out of Stock</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-header">
+        <h5 class="mb-0">Products Stock Levels</h5>
+    </div>
+    <div class="card-body">
+        @if (Model.Products.Any())
+        {
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Product Name</th>
+                            <th>SKU</th>
+                            <th>Category</th>
+                            <th>Current Stock</th>
+                            <th>Minimum Level</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var product in Model.Products)
+                        {
+                            <tr>
+                                <td>
+                                    <strong>@product.Name</strong>
+                                </td>
+                                <td>
+                                    <code>@product.SKU</code>
+                                </td>
+                                <td>@product.Category?.Name</td>
+                                <td>
+                                    <span class="badge bg-info">@product.QuantityInStock</span>
+                                </td>
+                                <td>@product.MinimumStockLevel</td>
+                                <td>
+                                    @if (product.QuantityInStock == 0)
+                                    {
+                                        <span class="badge bg-danger">Out of Stock</span>
+                                    }
+                                    else if (product.QuantityInStock <= product.MinimumStockLevel)
+                                    {
+                                        <span class="badge bg-warning">Low Stock</span>
+                                    }
+                                    else
+                                    {
+                                        <span class="badge bg-success">In Stock</span>
+                                    }
+                                </td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/Stock/AddStock?productId=@product.Id" class="btn btn-success" title="Add Stock">
+                                            <i class="bi bi-plus-lg"></i>
+                                        </a>
+                                        <a href="/Stock/RemoveStock?productId=@product.Id" class="btn btn-warning" title="Remove Stock">
+                                            <i class="bi bi-dash-lg"></i>
+                                        </a>
+                                        <a href="/Stock/Transactions?productId=@product.Id" class="btn btn-info" title="View Transactions">
+                                            <i class="bi bi-clock-history"></i>
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="alert alert-info" role="alert">
+                <i class="bi bi-info-circle"></i> No products found.
+            </div>
+        }
+    </div>
+</div>

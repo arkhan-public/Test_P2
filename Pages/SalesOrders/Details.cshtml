@@ -1,0 +1,220 @@
+@page
+@model InventorySystem.Pages.SalesOrders.DetailsModel
+@{
+    ViewData["Title"] = "Sales Order Details";
+}
+
+@if (Model.SalesOrder == null)
+{
+    <div class="alert alert-danger" role="alert">
+        <i class="bi bi-exclamation-triangle"></i> Sales order not found.
+    </div>
+    <a href="/SalesOrders" class="btn btn-secondary">
+        <i class="bi bi-arrow-left"></i> Back to List
+    </a>
+}
+else
+{
+    <div class="row mb-3">
+        <div class="col-md-8">
+            <h2><i class="bi bi-file-earmark-text"></i> Sales Order #@Model.SalesOrder.OrderNumber</h2>
+        </div>
+        <div class="col-md-4 text-end">
+            @switch (Model.SalesOrder.Status)
+            {
+                case InventorySystem.Models.SalesOrderStatus.Pending:
+                    <span class="badge bg-warning" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        <i class="bi bi-clock"></i> Pending
+                    </span>
+                    break;
+                case InventorySystem.Models.SalesOrderStatus.Completed:
+                    <span class="badge bg-success" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        <i class="bi bi-check-circle"></i> Completed
+                    </span>
+                    break;
+                case InventorySystem.Models.SalesOrderStatus.Cancelled:
+                    <span class="badge bg-danger" style="font-size: 0.9rem; padding: 0.5rem 1rem;">
+                        <i class="bi bi-x-circle"></i> Cancelled
+                    </span>
+                    break;
+            }
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <!-- Order Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-info-circle"></i> Order Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Order Number:</label>
+                            <p class="fs-6"><strong>@Model.SalesOrder.OrderNumber</strong></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label text-muted">Order Date:</label>
+                            <p class="fs-6"><strong>@Model.SalesOrder.OrderDate.ToString("MMM dd, yyyy HH:mm")</strong></p>
+                        </div>
+                    </div>
+
+                    @if (Model.SalesOrder.CompletedDate.HasValue)
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label text-muted">Completed Date:</label>
+                                <p class="fs-6"><strong>@Model.SalesOrder.CompletedDate.Value.ToString("MMM dd, yyyy HH:mm")</strong></p>
+                            </div>
+                        </div>
+                    }
+
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label text-muted">Total Amount:</label>
+                            <p class="fs-5"><strong class="text-success">$@Model.SalesOrder.TotalAmount.ToString("N2")</strong></p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.SalesOrder.Notes))
+                    {
+                        <div class="row mb-0">
+                            <div class="col-md-12">
+                                <label class="form-label text-muted">Notes:</label>
+                                <p class="fs-6">@Model.SalesOrder.Notes</p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <!-- Customer Information Card -->
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="mb-0"><i class="bi bi-person"></i> Customer Information</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row mb-3">
+                        <div class="col-md-12">
+                            <label class="form-label text-muted">Customer Name:</label>
+                            <p class="fs-6"><strong>@Model.SalesOrder.CustomerName</strong></p>
+                        </div>
+                    </div>
+
+                    @if (!string.IsNullOrWhiteSpace(Model.SalesOrder.CustomerEmail))
+                    {
+                        <div class="row mb-3">
+                            <div class="col-md-12">
+                                <label class="form-label text-muted">Email:</label>
+                                <p class="fs-6"><a href="mailto:@Model.SalesOrder.CustomerEmail">@Model.SalesOrder.CustomerEmail</a></p>
+                            </div>
+                        </div>
+                    }
+
+                    @if (!string.IsNullOrWhiteSpace(Model.SalesOrder.CustomerPhone))
+                    {
+                        <div class="row mb-0">
+                            <div class="col-md-12">
+                                <label class="form-label text-muted">Phone:</label>
+                                <p class="fs-6"><a href="tel:@Model.SalesOrder.CustomerPhone">@Model.SalesOrder.CustomerPhone</a></p>
+                            </div>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Order Items Card -->
+    <div class="card mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order Items</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                @if (Model.SalesOrder.Items.Any())
+                {
+                    <table class="table table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th style="text-align: center;">Unit Price</th>
+                                <th style="text-align: center;">Quantity</th>
+                                <th style="text-align: center;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.SalesOrder.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.Product?.Name</strong>
+                                        @if (!string.IsNullOrEmpty(item.Product?.SKU))
+                                        {
+                                            <br />
+                                            <small class="text-muted">SKU: @item.Product.SKU</small>
+                                        }
+                                    </td>
+                                    <td style="text-align: center;">$@item.UnitPrice.ToString("N2")</td>
+                                    <td style="text-align: center;">@item.Quantity @(item.Quantity == 1 ? "unit" : "units")</td>
+                                    <td style="text-align: center; font-weight: bold;">$@item.TotalPrice.ToString("N2")</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+
+                    <!-- Order Summary -->
+                    <div class="row mt-4">
+                        <div class="col-md-8"></div>
+                        <div class="col-md-4">
+                            <table class="table table-sm">
+                                <tr>
+                                    <td><strong>Subtotal:</strong></td>
+                                    <td style="text-align: right;">$@Model.SalesOrder.Items.Sum(i => i.TotalPrice).ToString("N2")</td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Number of Items:</strong></td>
+                                    <td style="text-align: right;">@Model.SalesOrder.Items.Count()</td>
+                                </tr>
+                                <tr class="table-primary">
+                                    <td><strong>Order Total:</strong></td>
+                                    <td style="text-align: right; font-size: 1.1rem;"><strong>$@Model.SalesOrder.TotalAmount.ToString("N2")</strong></td>
+                                </tr>
+                            </table>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="alert alert-info" role="alert">
+                        <i class="bi bi-info-circle"></i> No items in this order.
+                    </div>
+                }
+            </div>
+        </div>
+    </div>
+
+    <!-- Action Buttons -->
+    <div class="row mb-3">
+        <div class="col-md-12">
+            <a href="/SalesOrders" class="btn btn-secondary">
+                <i class="bi bi-arrow-left"></i> Back to List
+            </a>
+
+            @if (Model.SalesOrder.Status == InventorySystem.Models.SalesOrderStatus.Pending)
+            {
+                <form method="post" style="display: inline;">
+                    <button type="submit" name="action" value="complete" class="btn btn-success">
+                        <i class="bi bi-check-circle"></i> Mark as Completed
+                    </button>
+                    <button type="submit" name="action" value="cancel" class="btn btn-danger" onclick="return confirm('Are you sure you want to cancel this order?');">
+                        <i class="bi bi-x-circle"></i> Cancel Order
+                    </button>
+                </form>
+            }
+        </div>
+    </div>
+}

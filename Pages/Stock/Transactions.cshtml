@@ -1,0 +1,160 @@
+@page
+@model InventorySystem.Pages.Stock.TransactionsModel
+@{
+    ViewData["Title"] = "Stock Transactions";
+}
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="bi bi-clock-history"></i> Stock Transactions</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="/Stock/Overview" class="btn btn-secondary">
+            <i class="bi bi-box2"></i> Back to Overview
+        </a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-2">
+                <div class="col-md-4">
+                    <input type="text" name="productSearch" value="@Model.ProductSearch" class="form-control" placeholder="Search by product name...">
+                </div>
+                <div class="col-md-3">
+                    <select name="transactionType" class="form-select">
+                        <option value="">All Types</option>
+                        <option value="Purchase" selected="@(Model.TransactionType == "Purchase")">Purchase</option>
+                        <option value="Sale" selected="@(Model.TransactionType == "Sale")">Sale</option>
+                        <option value="Adjustment" selected="@(Model.TransactionType == "Adjustment")">Adjustment</option>
+                        <option value="Return" selected="@(Model.TransactionType == "Return")">Return</option>
+                    </select>
+                </div>
+                <div class="col-md-3">
+                    <input type="date" name="filterDate" value="@Model.FilterDate?.ToString("yyyy-MM-dd")" class="form-control">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+@if (Model.Transactions.Any())
+{
+    <div class="card">
+        <div class="card-header">
+            <h5 class="mb-0">Recent Transactions (Total: @Model.Transactions.Count)</h5>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Date & Time</th>
+                            <th>Product</th>
+                            <th>Type</th>
+                            <th>Quantity</th>
+                            <th>Balance After</th>
+                            <th>Reference</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var transaction in Model.Transactions)
+                        {
+                            <tr>
+                                <td>
+                                    <small>
+                                        <i class="bi bi-calendar-event"></i>
+                                        @transaction.TransactionDate.ToString("MMM dd, yyyy")
+                                        <br>
+                                        <i class="bi bi-clock"></i>
+                                        @transaction.TransactionDate.ToString("HH:mm:ss")
+                                    </small>
+                                </td>
+                                <td>
+                                    <strong>@transaction.Product?.Name</strong>
+                                    <br>
+                                    <small class="text-muted">SKU: @(transaction.Product?.SKU ?? "N/A")</small>
+                                </td>
+                                <td>
+                                    @switch (transaction.TransactionType)
+                                    {
+                                        case InventorySystem.Models.TransactionType.Purchase:
+                                            <span class="badge bg-success">
+                                                <i class="bi bi-plus-lg"></i> Purchase
+                                            </span>
+                                            break;
+                                        case InventorySystem.Models.TransactionType.Sale:
+                                            <span class="badge bg-danger">
+                                                <i class="bi bi-dash-lg"></i> Sale
+                                            </span>
+                                            break;
+                                        case InventorySystem.Models.TransactionType.Adjustment:
+                                            <span class="badge bg-warning">
+                                                <i class="bi bi-arrow-left-right"></i> Adjustment
+                                            </span>
+                                            break;
+                                        case InventorySystem.Models.TransactionType.Return:
+                                            <span class="badge bg-info">
+                                                <i class="bi bi-arrow-return-left"></i> Return
+                                            </span>
+                                            break;
+                                    }
+                                </td>
+                                <td>
+                                    @if (transaction.TransactionType == InventorySystem.Models.TransactionType.Sale)
+                                    {
+                                        <span class="text-danger">
+                                            <strong>-@transaction.Quantity</strong>
+                                        </span>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-success">
+                                            <strong>+@transaction.Quantity</strong>
+                                        </span>
+                                    }
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">@transaction.BalanceAfter</span>
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(transaction.Reference))
+                                    {
+                                        <code>@transaction.Reference</code>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                                <td>
+                                    @if (!string.IsNullOrEmpty(transaction.Notes))
+                                    {
+                                        <small>@transaction.Notes</small>
+                                    }
+                                    else
+                                    {
+                                        <span class="text-muted">-</span>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+}
+else
+{
+    <div class="alert alert-info" role="alert">
+        <i class="bi bi-info-circle"></i> No transactions found.
+    </div>
+}

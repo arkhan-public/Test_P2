@@ -1,0 +1,78 @@
+@page
+@model InventorySystem.Pages.Suppliers.IndexModel
+@{
+    ViewData["Title"] = "Suppliers";
+}
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="bi bi-shop"></i> Suppliers</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="/Suppliers/Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Supplier
+        </a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-2">
+                <div class="col-md-10">
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="Search by name or email...">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Email</th>
+                        <th>Phone</th>
+                        <th>Address</th>
+                        <th>Products</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var supplier in Model.Suppliers)
+                    {
+                        <tr>
+                            <td><strong>@supplier.Name</strong></td>
+                            <td>@supplier.Email</td>
+                            <td>@supplier.Phone</td>
+                            <td>@supplier.Address</td>
+                            <td>
+                                <span class="badge bg-info">@supplier.Products.Count</span>
+                            </td>
+                            <td>@supplier.CreatedAt.ToString("MM/dd/yyyy")</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/Suppliers/Edit?id=@supplier.Id" class="btn btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="/Suppliers/Delete?id=@supplier.Id" class="btn btn-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

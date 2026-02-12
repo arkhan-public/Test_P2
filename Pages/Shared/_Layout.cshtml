@@ -1,0 +1,308 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - Inventory Management System</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.0/font/bootstrap-icons.css" />
+    <style>
+        body {
+            min-height: 100vh;
+        }
+        .sidebar {
+            min-height: 100vh;
+            width: 250px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            background: linear-gradient(180deg, #2c3e50 0%, #34495e 100%);
+            padding: 0;
+            overflow-y: auto;
+            z-index: 1000;
+            box-shadow: 2px 0 5px rgba(0,0,0,0.1);
+        }
+        .sidebar-header {
+            background: #1a252f;
+            padding: 20px;
+            text-align: center;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+        .sidebar-header h4 {
+            color: white;
+            margin: 0;
+            font-size: 1.2rem;
+            font-weight: 600;
+        }
+        .sidebar-header i {
+            font-size: 2rem;
+            color: #3498db;
+            margin-bottom: 10px;
+        }
+        .sidebar-menu {
+            padding: 5px 0;
+        }
+        .sidebar-menu .menu-item {
+            margin: 0;
+        }
+        .sidebar-menu .menu-link {
+            display: flex;
+            align-items: center;
+            padding: 12px 20px;
+            color: rgba(255,255,255,0.8);
+            text-decoration: none;
+            transition: all 0.3s;
+            border-left: 3px solid transparent;
+        }
+        .sidebar-menu .menu-link:hover {
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border-left-color: #3498db;
+        }
+        .sidebar-menu .menu-link.active {
+            background: rgba(52, 152, 219, 0.2);
+            color: white;
+            border-left-color: #3498db;
+        }
+        .sidebar-menu .menu-link i {
+            font-size: 1.2rem;
+            margin-right: 12px;
+            width: 25px;
+            text-align: center;
+        }
+        .sidebar-menu .menu-section {
+            padding: 10px 20px 5px 20px;
+            color: rgba(255,255,255,0.5);
+            font-size: 0.75rem;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-top: 10px;
+        }
+        .main-content {
+            margin-left: 250px;
+            padding: 0;
+            min-height: 100vh;
+            background: #f8f9fa;
+        }
+        .content-wrapper {
+            padding: 30px;
+        }
+        .top-bar {
+            background: white;
+            padding: 15px 30px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .top-bar h5 {
+            margin: 0;
+            color: #2c3e50;
+        }
+        footer {
+            background: white;
+            padding: 20px 30px;
+            margin-top: 40px;
+            text-align: center;
+            color: #7f8c8d;
+            border-top: 1px solid #ecf0f1;
+        }
+
+        /* Responsive */
+        @@media (max-width: 768px) {
+            .sidebar {
+                width: 70px;
+            }
+            .sidebar-header h4,
+            .sidebar-menu .menu-link span,
+            .sidebar-menu .menu-section {
+                display: none;
+            }
+            .sidebar-menu .menu-link {
+                justify-content: center;
+                padding: 12px 10px;
+            }
+            .sidebar-menu .menu-link i {
+                margin-right: 0;
+            }
+            .main-content {
+                margin-left: 70px;
+            }
+        }
+
+        /* Scrollbar styling */
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+        .sidebar::-webkit-scrollbar-track {
+            background: rgba(0,0,0,0.1);
+        }
+        .sidebar::-webkit-scrollbar-thumb {
+            background: rgba(255,255,255,0.2);
+            border-radius: 3px;
+        }
+        .sidebar::-webkit-scrollbar-thumb:hover {
+            background: rgba(255,255,255,0.3);
+        }
+    </style>
+</head>
+<body>
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <i class="bi bi-box-seam"></i>
+            <h4>Inventory<br/>System</h4>
+        </div>
+
+        <div class="sidebar-menu">
+            <!-- Dashboard -->
+            <div class="menu-item">
+                <a class="menu-link" href="/">
+                    <i class="bi bi-speedometer2"></i>
+                    <span>Dashboard</span>
+                </a>
+            </div>
+
+            <!-- Products Section -->
+            <div class="menu-section">Products</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Products">
+                    <i class="bi bi-box-seam"></i>
+                    <span>All Products</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Products/Create">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Add Product</span>
+                </a>
+            </div>
+
+            <!-- Categories -->
+            <div class="menu-section">Categories</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Categories">
+                    <i class="bi bi-tags"></i>
+                    <span>All Categories</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Categories/Create">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Add Category</span>
+                </a>
+            </div>
+
+            <!-- Suppliers -->
+            <div class="menu-section">Suppliers</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Suppliers">
+                    <i class="bi bi-truck"></i>
+                    <span>All Suppliers</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Suppliers/Create">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Add Supplier</span>
+                </a>
+            </div>
+
+            <!-- Stock Management -->
+            <div class="menu-section">Stock</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Stock/Overview">
+                    <i class="bi bi-stack"></i>
+                    <span>Stock Overview</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Stock/AddStock">
+                    <i class="bi bi-box-arrow-in-down"></i>
+                    <span>Add Stock</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Stock/RemoveStock">
+                    <i class="bi bi-box-arrow-up"></i>
+                    <span>Remove Stock</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/Stock/Transactions">
+                    <i class="bi bi-clock-history"></i>
+                    <span>Transactions</span>
+                </a>
+            </div>
+
+            <!-- Purchase Orders -->
+            <div class="menu-section">Purchase Orders</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/PurchaseOrders">
+                    <i class="bi bi-cart-plus"></i>
+                    <span>All Orders</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/PurchaseOrders/Create">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create Order</span>
+                </a>
+            </div>
+
+            <!-- Sales Orders -->
+            <div class="menu-section">Sales Orders</div>
+            <div class="menu-item">
+                <a class="menu-link" href="/SalesOrders">
+                    <i class="bi bi-cart-check"></i>
+                    <span>All Orders</span>
+                </a>
+            </div>
+            <div class="menu-item">
+                <a class="menu-link" href="/SalesOrders/Create">
+                    <i class="bi bi-plus-circle"></i>
+                    <span>Create Order</span>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <div class="top-bar">
+            <h5>@ViewData["Title"]</h5>
+            <div>
+                <span class="text-muted">Inventory Management System</span>
+            </div>
+        </div>
+
+        <div class="content-wrapper">
+            @RenderBody()
+        </div>
+
+        <footer>
+            <span>Inventory Management System &copy; 2025 | ASP.NET Core 8.0</span>
+        </footer>
+    </div>
+
+    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Highlight active menu item
+        document.addEventListener('DOMContentLoaded', function() {
+            const currentPath = window.location.pathname;
+            const menuLinks = document.querySelectorAll('.sidebar-menu .menu-link');
+
+            menuLinks.forEach(link => {
+                if (link.getAttribute('href') === currentPath) {
+                    link.classList.add('active');
+                } else if (currentPath !== '/' && link.getAttribute('href') !== '/' && currentPath.startsWith(link.getAttribute('href'))) {
+                    link.classList.add('active');
+                }
+            });
+        });
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

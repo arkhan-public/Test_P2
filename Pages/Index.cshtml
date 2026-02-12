@@ -1,0 +1,227 @@
+@page
+@model IndexModel
+@{
+    ViewData["Title"] = "Dashboard";
+}
+
+<div class="row">
+    <div class="col-12">
+        <h2 class="mb-4">
+            <i class="bi bi-speedometer2"></i> Dashboard
+        </h2>
+    </div>
+</div>
+
+<div class="row g-4 mb-4">
+    <div class="col-md-3">
+        <div class="card text-white bg-primary">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Products</h6>
+                        <h2 class="mb-0">@Model.TotalProducts</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-box-seam" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/Products" class="text-white text-decoration-none">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-success">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Categories</h6>
+                        <h2 class="mb-0">@Model.TotalCategories</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-tags" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/Categories" class="text-white text-decoration-none">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-info">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Suppliers</h6>
+                        <h2 class="mb-0">@Model.TotalSuppliers</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-truck" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/Suppliers" class="text-white text-decoration-none">View All <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="card text-white bg-warning">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="card-title">Total Stock</h6>
+                        <h2 class="mb-0">@Model.TotalStock</h2>
+                    </div>
+                    <div>
+                        <i class="bi bi-stack" style="font-size: 3rem;"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="card-footer">
+                <a href="/Stock/Overview" class="text-white text-decoration-none">View Details <i class="bi bi-arrow-right"></i></a>
+            </div>
+        </div>
+    </div>
+</div>
+
+@if (Model.LowStockProducts.Any())
+{
+    <div class="row mb-4">
+        <div class="col-12">
+            <div class="card border-danger">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="mb-0">
+                        <i class="bi bi-exclamation-triangle"></i> Low Stock Alerts
+                    </h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Product</th>
+                                    <th>SKU</th>
+                                    <th>Category</th>
+                                    <th>Current Stock</th>
+                                    <th>Min Level</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach (var product in Model.LowStockProducts)
+                                {
+                                    <tr>
+                                        <td>
+                                            @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                            {
+                                                <img src="@product.ImageUrl" alt="@product.Name" style="width: 30px; height: 30px; object-fit: cover; margin-right: 8px;">
+                                            }
+                                            @product.Name
+                                        </td>
+                                        <td>@product.SKU</td>
+                                        <td>@product.Category?.Name</td>
+                                        <td>
+                                            <span class="badge bg-danger">@product.QuantityInStock</span>
+                                        </td>
+                                        <td>@product.MinimumStockLevel</td>
+                                        <td>
+                                            <a href="/Stock/AddStock?productId=@product.Id" class="btn btn-sm btn-success">
+                                                <i class="bi bi-plus-circle"></i> Add Stock
+                                            </a>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+}
+
+<div class="row">
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-clock-history"></i> Recent Stock Transactions
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-sm">
+                        <thead>
+                            <tr>
+                                <th>Date</th>
+                                <th>Product</th>
+                                <th>Type</th>
+                                <th>Quantity</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var transaction in Model.RecentTransactions)
+                            {
+                                <tr>
+                                    <td>@transaction.TransactionDate.ToString("MM/dd HH:mm")</td>
+                                    <td>@transaction.Product?.Name</td>
+                                    <td>
+                                        <span class="badge bg-@(transaction.TransactionType switch
+                                        {
+                                            TransactionType.Purchase => "success",
+                                            TransactionType.Sale => "primary",
+                                            TransactionType.Adjustment => "warning",
+                                            TransactionType.Return => "info",
+                                            _ => "secondary"
+                                        })">
+                                            @transaction.TransactionType
+                                        </span>
+                                    </td>
+                                    <td>@transaction.Quantity</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+                <div class="text-center mt-2">
+                    <a href="/Stock/Transactions" class="btn btn-sm btn-outline-primary">View All Transactions</a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-6 mb-4">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-info-circle"></i> Quick Links
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="list-group">
+                    <a href="/Products/Create" class="list-group-item list-group-item-action">
+                        <i class="bi bi-plus-circle"></i> Add New Product
+                    </a>
+                    <a href="/PurchaseOrders/Create" class="list-group-item list-group-item-action">
+                        <i class="bi bi-cart-plus"></i> Create Purchase Order
+                    </a>
+                    <a href="/SalesOrders/Create" class="list-group-item list-group-item-action">
+                        <i class="bi bi-cart-check"></i> Create Sales Order
+                    </a>
+                    <a href="/Stock/AddStock" class="list-group-item list-group-item-action">
+                        <i class="bi bi-box-arrow-in-down"></i> Add Stock
+                    </a>
+                    <a href="/Stock/Overview" class="list-group-item list-group-item-action">
+                        <i class="bi bi-graph-up"></i> Stock Overview
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

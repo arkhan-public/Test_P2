@@ -1,0 +1,57 @@
+@page
+@model InventorySystem.Pages.Categories.IndexModel
+@{
+    ViewData["Title"] = "Categories";
+}
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="bi bi-tags"></i> Categories</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="/Categories/Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Category
+        </a>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Name</th>
+                        <th>Description</th>
+                        <th>Products Count</th>
+                        <th>Created</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var category in Model.Categories)
+                    {
+                        <tr>
+                            <td><strong>@category.Name</strong></td>
+                            <td>@category.Description</td>
+                            <td>
+                                <span class="badge bg-primary">@category.Products.Count</span>
+                            </td>
+                            <td>@category.CreatedAt.ToString("MM/dd/yyyy")</td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/Categories/Edit?id=@category.Id" class="btn btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="/Categories/Delete?id=@category.Id" class="btn btn-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>

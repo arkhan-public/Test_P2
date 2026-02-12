@@ -1,0 +1,245 @@
+@page
+@model InventorySystem.Pages.PurchaseOrders.CreateModel
+@{
+    ViewData["Title"] = "Create Purchase Order";
+}
+
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header">
+                <h3><i class="bi bi-plus-circle"></i> Create New Purchase Order</h3>
+            </div>
+            <div class="card-body">
+                <form method="post" id="purchaseOrderForm">
+                    <!-- Supplier Selection -->
+                    <div class="mb-3">
+                        <label asp-for="SupplierId" class="form-label"></label>
+                        <select asp-for="SupplierId" id="supplierSelect" class="form-select" onchange="onSupplierChange()">
+                            <option value="">-- Select Supplier --</option>
+                            @foreach (var supplier in Model.Suppliers)
+                            {
+                                <option value="@supplier.Value">@supplier.Text</option>
+                            }
+                        </select>
+                        <span asp-validation-for="SupplierId" class="text-danger"></span>
+                    </div>
+
+                    <!-- Notes -->
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label"></label>
+                        <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Enter any additional notes for this purchase order..."></textarea>
+                        <span asp-validation-for="Notes" class="text-danger"></span>
+                    </div>
+
+                    <!-- Products Section -->
+                    <div class="card mt-4 mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0">
+                                <i class="bi bi-box-seam"></i> Order Items
+                            </h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="itemsTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 35%;">Product</th>
+                                            <th style="width: 15%;">Unit Price</th>
+                                            <th style="width: 15%;">Quantity</th>
+                                            <th style="width: 20%;">Total</th>
+                                            <th style="width: 15%;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                        <!-- Rows will be added dynamically -->
+                                    </tbody>
+                                </table>
+                            </div>
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductRow()">
+                                <i class="bi bi-plus-circle"></i> Add Product Row
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Summary -->
+                    <div class="row">
+                        <div class="col-md-6 offset-md-6">
+                            <div class="card bg-light">
+                                <div class="card-body">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <span>Subtotal:</span>
+                                        <span id="subtotal">$0.00</span>
+                                    </div>
+                                    <div class="d-flex justify-content-between" style="font-size: 1.2rem;">
+                                        <strong>Total:</strong>
+                                        <strong id="totalAmount">$0.00</strong>
+                                    </div>
+                                    <input type="hidden" id="totalInput" value="0.00" />
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="d-flex justify-content-between mt-4">
+                        <a href="/PurchaseOrders" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to List
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-save"></i> Create Purchase Order
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        let rowCount = 0;
+        const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllProducts));
+
+        // Initialize with empty row
+        document.addEventListener('DOMContentLoaded', function() {
+            addProductRow();
+        });
+
+        function addProductRow() {
+            const itemsBody = document.getElementById('itemsBody');
+            const rowIndex = rowCount++;
+
+            const row = document.createElement('tr');
+            row.id = 'row_' + rowIndex;
+
+            let productOptions = '<option value="">-- Select Product --</option>';
+            products.forEach(product => {
+                productOptions += `<option value="${product.id}" data-price="${product.unitPrice}">${product.name} (SKU: ${product.sku || 'N/A'})</option>`;
+            });
+
+            row.innerHTML = `
+                <td>
+                    <select class="form-select form-select-sm product-select"
+                            name="Items[${rowIndex}].ProductId"
+                            onchange="updateRowTotal(${rowIndex})">
+                        ${productOptions}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm unit-price"
+                           name="Items[${rowIndex}].UnitPrice"
+                           step="0.01" min="0" value="0"
+                           onchange="updateRowTotal(${rowIndex})"
+                           placeholder="0.00">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm quantity"
+                           name="Items[${rowIndex}].Quantity"
+                           min="0" value="0"
+                           onchange="updateRowTotal(${rowIndex})"
+                           placeholder="0">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm row-total"
+                           readonly
+                           value="$0.00"
+                           style="background-color: #f5f5f5;">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeProductRow(${rowIndex})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            itemsBody.appendChild(row);
+        }
+
+        function removeProductRow(rowIndex) {
+            const row = document.getElementById('row_' + rowIndex);
+            if (row) {
+                row.remove();
+                calculateTotal();
+            }
+        }
+
+        function updateRowTotal(rowIndex) {
+            const row = document.getElementById('row_' + rowIndex);
+            if (!row) return;
+
+            const productSelect = row.querySelector('.product-select');
+            const unitPriceInput = row.querySelector('.unit-price');
+            const quantityInput = row.querySelector('.quantity');
+            const rowTotalInput = row.querySelector('.row-total');
+
+            const productId = parseInt(productSelect.value);
+            let unitPrice = parseFloat(unitPriceInput.value) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+
+            // If unit price not manually set, use product's price
+            if (unitPrice === 0 && productId > 0) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    unitPrice = product.unitPrice;
+                    unitPriceInput.value = unitPrice.toFixed(2);
+                }
+            }
+
+            const rowTotal = unitPrice * quantity;
+            rowTotalInput.value = '$' + rowTotal.toFixed(2);
+
+            calculateTotal();
+        }
+
+        function onSupplierChange() {
+            // Could add additional logic here if needed
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('#itemsBody tr');
+
+            rows.forEach(row => {
+                const rowTotalText = row.querySelector('.row-total').value;
+                const rowTotal = parseFloat(rowTotalText.replace('$', '')) || 0;
+                total += rowTotal;
+            });
+
+            document.getElementById('subtotal').textContent = '$' + total.toFixed(2);
+            document.getElementById('totalAmount').textContent = '$' + total.toFixed(2);
+            document.getElementById('totalInput').value = total.toFixed(2);
+        }
+
+        // Validate form before submission
+        document.getElementById('purchaseOrderForm').addEventListener('submit', function(e) {
+            const supplierId = document.getElementById('supplierSelect').value;
+            const rows = document.querySelectorAll('#itemsBody tr');
+            let hasValidItem = false;
+
+            rows.forEach(row => {
+                const productId = row.querySelector('.product-select').value;
+                const quantity = parseInt(row.querySelector('.quantity').value) || 0;
+                if (productId && quantity > 0) {
+                    hasValidItem = true;
+                }
+            });
+
+            if (!supplierId) {
+                alert('Please select a supplier.');
+                e.preventDefault();
+                return false;
+            }
+
+            if (!hasValidItem) {
+                alert('Please add at least one product with quantity.');
+                e.preventDefault();
+                return false;
+            }
+
+            return true;
+        });
+    </script>
+}

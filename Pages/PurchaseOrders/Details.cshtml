@@ -1,0 +1,187 @@
+@page
+@model InventorySystem.Pages.PurchaseOrders.DetailsModel
+@{
+    ViewData["Title"] = "Purchase Order Details";
+}
+
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <!-- Success Message -->
+        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                <i class="bi bi-check-circle"></i> @Model.SuccessMessage
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <!-- Error Message -->
+        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+        {
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <i class="bi bi-exclamation-circle"></i> @Model.ErrorMessage
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-header">
+                <div class="d-flex justify-content-between align-items-center">
+                    <h3><i class="bi bi-file-text"></i> Purchase Order Details</h3>
+                    <div>
+                        @if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Pending)
+                        {
+                            <span class="badge bg-warning text-dark" style="font-size: 0.9rem;">
+                                <i class="bi bi-hourglass-split"></i> Pending
+                            </span>
+                        }
+                        else if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Completed)
+                        {
+                            <span class="badge bg-success" style="font-size: 0.9rem;">
+                                <i class="bi bi-check-circle"></i> Completed
+                            </span>
+                        }
+                        else if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Cancelled)
+                        {
+                            <span class="badge bg-danger" style="font-size: 0.9rem;">
+                                <i class="bi bi-x-circle"></i> Cancelled
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+            <div class="card-body">
+                <!-- Order Header Information -->
+                <div class="row mb-4">
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Order Number:</dt>
+                            <dd class="col-sm-7">
+                                <strong>@Model.PurchaseOrder.OrderNumber</strong>
+                            </dd>
+
+                            <dt class="col-sm-5">Supplier:</dt>
+                            <dd class="col-sm-7">
+                                <a href="/Suppliers/Details?id=@Model.PurchaseOrder.SupplierId">
+                                    @Model.PurchaseOrder.Supplier?.Name
+                                </a>
+                            </dd>
+
+                            <dt class="col-sm-5">Order Date:</dt>
+                            <dd class="col-sm-7">@Model.PurchaseOrder.OrderDate.ToString("MM/dd/yyyy hh:mm tt")</dd>
+                        </dl>
+                    </div>
+                    <div class="col-md-6">
+                        <dl class="row">
+                            <dt class="col-sm-5">Total Amount:</dt>
+                            <dd class="col-sm-7">
+                                <strong style="font-size: 1.2rem;" class="text-success">
+                                    $@Model.PurchaseOrder.TotalAmount.ToString("N2")
+                                </strong>
+                            </dd>
+
+                            @if (Model.PurchaseOrder.CompletedDate.HasValue)
+                            {
+                                <dt class="col-sm-5">Completed:</dt>
+                                <dd class="col-sm-7">@Model.PurchaseOrder.CompletedDate.Value.ToString("MM/dd/yyyy hh:mm tt")</dd>
+                            }
+
+                            <dt class="col-sm-5">Items:</dt>
+                            <dd class="col-sm-7">
+                                <span class="badge bg-info">@Model.PurchaseOrder.Items.Count</span>
+                            </dd>
+                        </dl>
+                    </div>
+                </div>
+
+                <!-- Notes Section -->
+                @if (!string.IsNullOrEmpty(Model.PurchaseOrder.Notes))
+                {
+                    <div class="alert alert-info mb-4">
+                        <strong><i class="bi bi-info-circle"></i> Notes:</strong>
+                        <p class="mb-0">@Model.PurchaseOrder.Notes</p>
+                    </div>
+                }
+
+                <!-- Order Items Table -->
+                <h5 class="mt-4 mb-3">
+                    <i class="bi bi-box-seam"></i> Order Items
+                </h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-striped">
+                        <thead class="table-light">
+                            <tr>
+                                <th>Product</th>
+                                <th style="width: 15%;">Unit Price</th>
+                                <th style="width: 12%;">Quantity</th>
+                                <th style="width: 15%;">Total Price</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            @foreach (var item in Model.PurchaseOrder.Items)
+                            {
+                                <tr>
+                                    <td>
+                                        <strong>@item.Product?.Name</strong>
+                                        @if (!string.IsNullOrEmpty(item.Product?.SKU))
+                                        {
+                                            <br />
+                                            <small class="text-muted">SKU: @item.Product.SKU</small>
+                                        }
+                                    </td>
+                                    <td class="text-end">$@item.UnitPrice.ToString("N2")</td>
+                                    <td class="text-center">@item.Quantity</td>
+                                    <td class="text-end">
+                                        <strong>$@item.TotalPrice.ToString("N2")</strong>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                        <tfoot class="table-light">
+                            <tr>
+                                <th colspan="3" class="text-end">Total:</th>
+                                <th class="text-end">
+                                    <strong class="text-success" style="font-size: 1.1rem;">
+                                        $@Model.PurchaseOrder.Items.Sum(i => i.TotalPrice).ToString("N2")
+                                    </strong>
+                                </th>
+                            </tr>
+                        </tfoot>
+                    </table>
+                </div>
+
+                <!-- Action Buttons -->
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="/PurchaseOrders" class="btn btn-secondary">
+                        <i class="bi bi-arrow-left"></i> Back to List
+                    </a>
+                    <div>
+                        @if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Pending)
+                        {
+                            <form method="post" style="display: inline;">
+                                <button type="submit" asp-page-handler="Complete" asp-route-id="@Model.PurchaseOrder.Id"
+                                        class="btn btn-success"
+                                        onclick="return confirm('Are you sure you want to complete this purchase order?');">
+                                    <i class="bi bi-check-circle"></i> Complete Order
+                                </button>
+                            </form>
+                            <form method="post" style="display: inline;">
+                                <button type="submit" asp-page-handler="Cancel" asp-route-id="@Model.PurchaseOrder.Id"
+                                        class="btn btn-danger"
+                                        onclick="return confirm('Are you sure you want to cancel this purchase order?');">
+                                    <i class="bi bi-x-circle"></i> Cancel Order
+                                </button>
+                            </form>
+                        }
+                        else
+                        {
+                            <span class="text-muted">
+                                <em>This order cannot be modified as it is @Model.PurchaseOrder.Status.ToString().</em>
+                            </span>
+                        }
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

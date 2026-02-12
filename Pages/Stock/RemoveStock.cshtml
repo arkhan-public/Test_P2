@@ -1,0 +1,147 @@
+@page
+@model InventorySystem.Pages.Stock.RemoveStockModel
+@{
+    ViewData["Title"] = "Remove Stock";
+}
+
+<div class="row">
+    <div class="col-md-8 offset-md-2">
+        <div class="card">
+            <div class="card-header bg-warning text-dark">
+                <h3 class="mb-0"><i class="bi bi-dash-lg"></i> Remove Stock from Product</h3>
+            </div>
+            <div class="card-body">
+                @if (!string.IsNullOrEmpty(Model.ErrorMessage))
+                {
+                    <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                        <i class="bi bi-exclamation-triangle"></i> @Model.ErrorMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                @if (!string.IsNullOrEmpty(Model.SuccessMessage))
+                {
+                    <div class="alert alert-success alert-dismissible fade show" role="alert">
+                        <i class="bi bi-check-circle"></i> @Model.SuccessMessage
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                    </div>
+                }
+
+                <form method="post">
+                    <div class="mb-3">
+                        <label asp-for="ProductId" class="form-label">
+                            <i class="bi bi-box-seam"></i> Select Product
+                        </label>
+                        <select asp-for="ProductId" class="form-select" asp-items="Model.Products" id="productSelect">
+                            <option value="">-- Select a Product --</option>
+                        </select>
+                        <span asp-validation-for="ProductId" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Current Stock</label>
+                            <input type="text" class="form-control" id="currentStock" readonly>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <label class="form-label">Minimum Level</label>
+                            <input type="text" class="form-control" id="minimumLevel" readonly>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Quantity" class="form-label">
+                            <i class="bi bi-calculator"></i> Quantity to Remove
+                        </label>
+                        <input asp-for="Quantity" type="number" class="form-control" min="1" placeholder="Enter quantity">
+                        <span asp-validation-for="Quantity" class="text-danger small"></span>
+                        <small class="form-text text-muted" id="warningText"></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="Notes" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Reason for Removal
+                        </label>
+                        <select asp-for="Notes" class="form-select" id="reasonSelect">
+                            <option value="">-- Select a Reason --</option>
+                            <option value="Damaged/Defective">Damaged/Defective</option>
+                            <option value="Inventory Count Adjustment">Inventory Count Adjustment</option>
+                            <option value="Customer Return">Customer Return</option>
+                            <option value="Theft/Loss">Theft/Loss</option>
+                            <option value="Expiration/Obsolete">Expiration/Obsolete</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        <span asp-validation-for="Notes" class="text-danger small"></span>
+                    </div>
+
+                    <div class="mb-3" id="additionalNotesDiv" style="display: none;">
+                        <label for="additionalNotes" class="form-label">
+                            <i class="bi bi-chat-left-text"></i> Additional Notes
+                        </label>
+                        <textarea id="additionalNotes" class="form-control" rows="3" placeholder="Add any additional details..."></textarea>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="/Stock/Overview" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back to Overview
+                        </a>
+                        <button type="submit" class="btn btn-warning">
+                            <i class="bi bi-check-circle"></i> Remove Stock
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const productSelect = document.getElementById('productSelect');
+        const reasonSelect = document.getElementById('reasonSelect');
+        const additionalNotesDiv = document.getElementById('additionalNotesDiv');
+        const warningText = document.getElementById('warningText');
+
+        productSelect.addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const currentStock = selectedOption.getAttribute('data-current-stock') || '0';
+            const minimumLevel = selectedOption.getAttribute('data-minimum-level') || '0';
+
+            document.getElementById('currentStock').value = currentStock;
+            document.getElementById('minimumLevel').value = minimumLevel;
+            updateWarningMessage(parseInt(currentStock));
+        });
+
+        reasonSelect.addEventListener('change', function() {
+            if (this.value === 'Other') {
+                additionalNotesDiv.style.display = 'block';
+            } else {
+                additionalNotesDiv.style.display = 'none';
+            }
+        });
+
+        function updateWarningMessage(currentStock) {
+            const quantityInput = document.querySelector('input[name="Quantity"]');
+            if (quantityInput && quantityInput.value) {
+                const quantity = parseInt(quantityInput.value) || 0;
+                if (quantity > currentStock) {
+                    warningText.textContent = 'Warning: Quantity exceeds current stock!';
+                    warningText.className = 'form-text text-warning';
+                } else {
+                    warningText.textContent = '';
+                    warningText.className = 'form-text text-muted';
+                }
+            }
+        }
+
+        document.addEventListener('input', function(e) {
+            if (e.target.name === 'Quantity') {
+                const currentStockInput = document.getElementById('currentStock');
+                if (currentStockInput.value) {
+                    updateWarningMessage(parseInt(currentStockInput.value));
+                }
+            }
+        });
+    </script>
+}

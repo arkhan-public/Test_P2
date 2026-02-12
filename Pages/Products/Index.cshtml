@@ -1,0 +1,95 @@
+@page
+@model InventorySystem.Pages.Products.IndexModel
+@{
+    ViewData["Title"] = "Products";
+}
+
+<div class="row mb-3">
+    <div class="col-md-6">
+        <h2><i class="bi bi-box-seam"></i> Products</h2>
+    </div>
+    <div class="col-md-6 text-end">
+        <a href="/Products/Create" class="btn btn-primary">
+            <i class="bi bi-plus-circle"></i> Add New Product
+        </a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-2">
+                <div class="col-md-10">
+                    <input type="text" name="searchTerm" value="@Model.SearchTerm" class="form-control" placeholder="Search by name, SKU, or description...">
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-search"></i> Search
+                    </button>
+                </div>
+            </div>
+        </form>
+    </div>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr>
+                        <th>Image</th>
+                        <th>Name</th>
+                        <th>SKU</th>
+                        <th>Category</th>
+                        <th>Supplier</th>
+                        <th>Price</th>
+                        <th>Stock</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @foreach (var product in Model.Products)
+                    {
+                        <tr>
+                            <td>
+                                @if (!string.IsNullOrEmpty(product.ImageUrl))
+                                {
+                                    <img src="@product.ImageUrl" alt="@product.Name" style="width: 50px; height: 50px; object-fit: cover;">
+                                }
+                            </td>
+                            <td>@product.Name</td>
+                            <td>@product.SKU</td>
+                            <td>@product.Category?.Name</td>
+                            <td>@product.Supplier?.Name</td>
+                            <td>$@product.UnitPrice.ToString("N2")</td>
+                            <td>
+                                @if (product.QuantityInStock <= product.MinimumStockLevel)
+                                {
+                                    <span class="badge bg-danger">@product.QuantityInStock</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">@product.QuantityInStock</span>
+                                }
+                            </td>
+                            <td>
+                                <div class="btn-group btn-group-sm">
+                                    <a href="/Products/Details?id=@product.Id" class="btn btn-info" title="Details">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
+                                    <a href="/Products/Edit?id=@product.Id" class="btn btn-warning" title="Edit">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <a href="/Products/Delete?id=@product.Id" class="btn btn-danger" title="Delete">
+                                        <i class="bi bi-trash"></i>
+                                    </a>
+                                </div>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
