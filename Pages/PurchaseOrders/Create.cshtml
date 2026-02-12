@@ -99,9 +99,15 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
 
+
     <script>
         let rowCount = 0;
-        const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllProducts));
+        @* Module 26: *@
+        @* Serialize a lightweight DTO to avoid EF reference loops / heavy serialization *@
+        @* const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(Model.AllProducts)); *@
+        const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.AllProducts.Select(p => new { id = p.Id, name = p.Name, sku = p.SKU, unitPrice = p.UnitPrice })
+        ));
 
         // Initialize with empty row
         document.addEventListener('DOMContentLoaded', function() {

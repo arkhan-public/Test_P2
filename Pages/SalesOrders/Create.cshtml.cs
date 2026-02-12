@@ -1,8 +1,9 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
+using Microsoft.AspNetCore.Mvc.Rendering;
 using InventorySystem.Models;
 using InventorySystem.Services.Interfaces;
-using System.Text.Json;
+using System.ComponentModel.DataAnnotations;
 
 namespace InventorySystem.Pages.SalesOrders
 {
@@ -17,114 +18,139 @@ namespace InventorySystem.Pages.SalesOrders
             _productService = productService;
         }
 
+        // Bind only the form fields we need (follow PurchaseOrder pattern)
         [BindProperty]
-        public SalesOrder SalesOrder { get; set; } = new();
+        [StringLength(100)]
+        public string? CustomerName { get; set; }
 
         [BindProperty]
-        public string? ItemsJson { get; set; }
+        [StringLength(100)]
+        public string? CustomerEmail { get; set; }
 
-        public List<Product> Products { get; set; } = new();
+        [BindProperty]
+        [StringLength(20)]
+        public string? CustomerPhone { get; set; }
+
+        [BindProperty]
+        [StringLength(500)]
+        public string? Notes { get; set; }
+
+        // items posted as Items[index].ProductId, Items[index].UnitPrice, Items[index].Quantity
+        [BindProperty]
+        public List<SalesOrderItemInput> Items { get; set; } = new();
+
+        public List<Product> AllProducts { get; set; } = new();
+
+        public SelectList ProductsSelect { get; set; } = null!;
 
         public async Task OnGetAsync()
         {
-            // Initialize order with current date
-            SalesOrder.OrderDate = DateTime.Now;
-            SalesOrder.Status = SalesOrderStatus.Pending;
-
-            // Load all products for the dropdown
-            Products = (await _productService.GetAllProductsAsync()).ToList();
+            AllProducts = (await _product_service_getall()).ToList();
+            ProductsSelect = new SelectList(AllProducts, "Id", "Name");
         }
 
         public async Task<IActionResult> OnPostAsync()
         {
-            // Validate that we have items
-            if (string.IsNullOrWhiteSpace(ItemsJson))
+            // Basic server-side validation
+            if (Items == null || Items.Count == 0 || Items.All(i => i.ProductId <= 0 || i.Quantity <= 0))
             {
-                ModelState.AddModelError("", "Please add at least one product to the order.");
-                Products = (await _productService.GetAllProductsAsync()).ToList();
+                ModelState.AddModelError(string.Empty, "Please add at least one product with quantity.");
+            }
+
+            if (!ModelState.IsValid)
+            {
+                AllProducts = (await _product_service_getall()).ToList();
+                ProductsSelect = new SelectList(AllProducts, "Id", "Name");
                 return Page();
             }
 
-            // Parse items from JSON
-            var items = new List<SalesOrderItem>();
-            try
+            // validate products and availability
+            var orderItems = new List<SalesOrderItem>();
+            decimal total = 0m;
+
+            foreach (var input in Items)
             {
-                var itemsData = JsonSerializer.Deserialize<List<dynamic>>(ItemsJson);
-                if (itemsData == null || itemsData.Count == 0)
+                if (input.ProductId <= 0 || input.Quantity <= 0) continue;
+
+                var product = await _productService.GetProductByIdAsync(input.ProductId);
+                if (product == null)
                 {
-                    ModelState.AddModelError("", "Please add at least one product to the order.");
-                    Products = (await _productService.GetAllProductsAsync()).ToList();
+                    ModelState.AddModelError(string.Empty, $"Product with ID {input.ProductId} not found.");
+                    AllProducts = (await _product_service_getall()).ToList();
+                    ProductsSelect = new SelectList(AllProducts, "Id", "Name");
                     return Page();
                 }
 
-                foreach (var itemData in itemsData)
+                if (product.QuantityInStock < input.Quantity)
                 {
-                    var productId = int.Parse(itemData.GetProperty("productId").ToString());
-                    var quantity = int.Parse(itemData.GetProperty("quantity").ToString());
-                    var unitPrice = decimal.Parse(itemData.GetProperty("unitPrice").ToString());
-
-                    // Validate product exists
-                    var product = await _productService.GetProductByIdAsync(productId);
-                    if (product == null)
-                    {
-                        ModelState.AddModelError("", $"Product not found.");
-                        Products = (await _productService.GetAllProductsAsync()).ToList();
-                        return Page();
-                    }
-
-                    // Validate stock availability
-                    if (product.QuantityInStock < quantity)
-                    {
-                        ModelState.AddModelError("", $"Insufficient stock for {product.Name}. Available: {product.QuantityInStock}, Requested: {quantity}");
-                        Products = (await _productService.GetAllProductsAsync()).ToList();
-                        return Page();
-                    }
-
-                    items.Add(new SalesOrderItem
-                    {
-                        ProductId = productId,
-                        Quantity = quantity,
-                        UnitPrice = unitPrice,
-                        TotalPrice = unitPrice * quantity
-                    });
+                    ModelState.AddModelError(string.Empty, $"Insufficient stock for {product.Name}. Available: {product.QuantityInStock}, Requested: {input.Quantity}");
+                    AllProducts = (await _product_service_getall()).ToList();
+                    ProductsSelect = new SelectList(AllProducts, "Id", "Name");
+                    return Page();
                 }
+
+                var unitPrice = input.UnitPrice >= 0 ? input.UnitPrice : product.UnitPrice;
+                var totalPrice = unitPrice * input.Quantity;
+
+                orderItems.Add(new SalesOrderItem
+                {
+                    ProductId = input.ProductId,
+                    Quantity = input.Quantity,
+                    UnitPrice = unitPrice,
+                    TotalPrice = totalPrice
+                });
+
+                total += totalPrice;
             }
-            catch (Exception ex)
+
+            if (orderItems.Count == 0)
             {
-                ModelState.AddModelError("", "Error parsing order items: " + ex.Message);
-                Products = (await _productService.GetAllProductsAsync()).ToList();
+                ModelState.AddModelError(string.Empty, "Please add at least one valid product with quantity.");
+                AllProducts = (await _product_service_getall()).ToList();
+                ProductsSelect = new SelectList(AllProducts, "Id", "Name");
                 return Page();
             }
 
-            // Validate customer details
-            if (!ModelState.IsValid)
+            // Build SalesOrder entity server-side and generate OrderNumber
+            var salesOrder = new SalesOrder
             {
-                Products = (await _productService.GetAllProductsAsync()).ToList();
-                return Page();
-            }
+                OrderNumber = $"SO-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}",
+                CustomerName = CustomerName,
+                CustomerEmail = CustomerEmail,
+                CustomerPhone = CustomerPhone,
+                OrderDate = DateTime.Now,
+                Status = SalesOrderStatus.Pending,
+                Notes = Notes,
+                TotalAmount = total
+            };
 
-            // Generate order number
-            SalesOrder.OrderNumber = $"SO-{DateTime.Now:yyyyMMdd}-{Guid.NewGuid().ToString().Substring(0, 8).ToUpper()}";
+            // Create and handle tuple result properly
+            var (success, message, createdOrder) = await _salesOrderService.CreateSalesOrderAsync(salesOrder, orderItems);
 
-            // Calculate total amount
-            SalesOrder.TotalAmount = items.Sum(i => i.TotalPrice);
-            SalesOrder.OrderDate = DateTime.Now;
-            SalesOrder.Status = SalesOrderStatus.Pending;
-
-            // Create sales order with items
-            var result = await _salesOrderService.CreateSalesOrderAsync(SalesOrder, items);
-
-            if (result.Success)
+            if (success)
             {
-                TempData["SuccessMessage"] = $"Sales order {result.Order?.OrderNumber} created successfully!";
+                var orderNumber = createdOrder?.OrderNumber ?? salesOrder.OrderNumber;
+                TempData["SuccessMessage"] = $"Sales order {orderNumber} created successfully!";
                 return RedirectToPage("./Index");
             }
             else
             {
-                ModelState.AddModelError("", result.Message);
-                Products = (await _productService.GetAllProductsAsync()).ToList();
+                // show service message
+                ModelState.AddModelError(string.Empty, message ?? "Unable to create sales order.");
+                AllProducts = (await _product_service_getall()).ToList();
+                ProductsSelect = new SelectList(AllProducts, "Id", "Name");
                 return Page();
             }
+        }
+
+        // helper wrappers
+        private Task<IEnumerable<Product>> _product_service_getall() => _productService.GetAllProductsAsync();
+
+        public class SalesOrderItemInput
+        {
+            public int ProductId { get; set; }
+            public int Quantity { get; set; }
+            public decimal UnitPrice { get; set; }
         }
     }
 }

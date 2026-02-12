@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.AspNetCore.Mvc.Rendering;
 using InventorySystem.Services.Interfaces;
+using InventorySystem.Models;
 
 namespace InventorySystem.Pages.Stock
 {
@@ -27,7 +28,8 @@ namespace InventorySystem.Pages.Stock
         [BindProperty]
         public string? Notes { get; set; }
 
-        public SelectList Products { get; set; } = null!;
+        // Expose the full product list so the view can render data-* attributes per option
+        public IEnumerable<Product> Products { get; set; } = Enumerable.Empty<Product>();
         public string? ErrorMessage { get; set; }
         public string? SuccessMessage { get; set; }
 
@@ -101,16 +103,7 @@ namespace InventorySystem.Pages.Stock
         private async Task LoadProductsAsync()
         {
             var products = await _productService.GetAllProductsAsync();
-            var productList = products
-                .Select(p => new SelectListItem
-                {
-                    Value = p.Id.ToString(),
-                    Text = $"{p.Name} (SKU: {p.SKU})",
-                    Disabled = false
-                })
-                .ToList();
-
-            Products = new SelectList(productList, "Value", "Text");
+            Products = products.ToList();
         }
     }
 }

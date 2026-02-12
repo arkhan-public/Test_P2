@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using InventorySystem.Data;
 using InventorySystem.Models;
+using InventorySystem.Repositories.Interfaces;
 using InventorySystem.Services.Interfaces;
 
 namespace InventorySystem.Services.Implementations
@@ -8,11 +9,19 @@ namespace InventorySystem.Services.Implementations
     public class SalesOrderService : ISalesOrderService
     {
         private readonly ApplicationDbContext _context;
+        private readonly ISalesOrderRepository _salesRepo;
+        private readonly IStockTransactionRepository _stockRepo;
         private readonly ILogger<SalesOrderService> _logger;
 
-        public SalesOrderService(ApplicationDbContext context, ILogger<SalesOrderService> logger)
+        public SalesOrderService(
+            ApplicationDbContext context,
+            ISalesOrderRepository salesRepo,
+            IStockTransactionRepository stockRepo,
+            ILogger<SalesOrderService> logger)
         {
             _context = context;
+            _salesRepo = salesRepo;
+            _stockRepo = stockRepo;
             _logger = logger;
         }
 
@@ -20,11 +29,7 @@ namespace InventorySystem.Services.Implementations
         {
             try
             {
-                return await _context.SalesOrders
-                    .Include(so => so.Items)
-                        .ThenInclude(soi => soi.Product)
-                    .OrderByDescending(so => so.OrderDate)
-                    .ToListAsync();
+                return await _salesRepo.GetAllWithItemsAsync();
             }
             catch (Exception ex)
             {
@@ -37,10 +42,7 @@ namespace InventorySystem.Services.Implementations
         {
             try
             {
-                return await _context.SalesOrders
-                    .Include(so => so.Items)
-                        .ThenInclude(soi => soi.Product)
-                    .FirstOrDefaultAsync(so => so.Id == id);
+                return await _salesRepo.GetByIdWithItemsAsync(id);
             }
             catch (Exception ex)
             {
@@ -54,27 +56,22 @@ namespace InventorySystem.Services.Implementations
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Check stock availability for all items first
+                // Validate product availability (do not change product stock here)
                 foreach (var item in items)
                 {
                     var product = await _context.Products.FindAsync(item.ProductId);
                     if (product == null)
-                    {
                         return (false, $"Product with ID {item.ProductId} not found", null);
-                    }
 
                     if (product.QuantityInStock < item.Quantity)
-                    {
                         return (false, $"Insufficient stock for {product.Name}. Available: {product.QuantityInStock}, Required: {item.Quantity}", null);
-                    }
                 }
 
-                // Generate order number
+                // Prepare order
                 salesOrder.OrderNumber = $"SO-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
                 salesOrder.OrderDate = DateTime.Now;
                 salesOrder.Status = SalesOrderStatus.Pending;
 
-                // Calculate total
                 decimal total = 0;
                 foreach (var item in items)
                 {
@@ -83,45 +80,19 @@ namespace InventorySystem.Services.Implementations
                 }
                 salesOrder.TotalAmount = total;
 
-                _context.SalesOrders.Add(salesOrder);
+                await _salesRepo.AddAsync(salesOrder);
                 await _context.SaveChangesAsync();
 
-                // Add items and deduct stock
                 foreach (var item in items)
                 {
                     item.SalesOrderId = salesOrder.Id;
-                    _context.SalesOrderItems.Add(item);
-
-                    var product = await _context.Products.FindAsync(item.ProductId);
-                    if (product != null)
-                    {
-                        product.QuantityInStock -= item.Quantity;
-                        product.UpdatedAt = DateTime.Now;
-
-                        // Create stock transaction
-                        var stockTransaction = new StockTransaction
-                        {
-                            ProductId = product.Id,
-                            TransactionType = TransactionType.Sale,
-                            Quantity = -item.Quantity,
-                            BalanceAfter = product.QuantityInStock,
-                            Reference = $"SO: {salesOrder.OrderNumber}",
-                            Notes = $"Sales order",
-                            TransactionDate = DateTime.Now
-                        };
-                        _context.StockTransactions.Add(stockTransaction);
-                    }
+                    await _salesRepo.AddItemAsync(item);
                 }
 
                 await _context.SaveChangesAsync();
-
-                // Mark as completed immediately
-                salesOrder.Status = SalesOrderStatus.Completed;
-                salesOrder.CompletedDate = DateTime.Now;
-                await _context.SaveChangesAsync();
-
                 await transaction.CommitAsync();
-                _logger.LogInformation("Sales order created: {OrderNumber}", salesOrder.OrderNumber);
+
+                _logger.LogInformation("Sales order created (Pending): {OrderNumber}", salesOrder.OrderNumber);
                 return (true, "Sales order created successfully", salesOrder);
             }
             catch (Exception ex)
@@ -134,23 +105,67 @@ namespace InventorySystem.Services.Implementations
 
         public async Task<bool> CompleteSalesOrderAsync(int id)
         {
+            using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var salesOrder = await _context.SalesOrders.FindAsync(id);
+                var salesOrder = await _salesRepo.GetByIdWithItemsAsync(id);
+
                 if (salesOrder == null || salesOrder.Status != SalesOrderStatus.Pending)
                 {
+                    _logger.LogWarning("Sales order not found or not pending: {SalesOrderId}", id);
                     return false;
+                }
+
+                // Re-check stock & prepare changes
+                foreach (var item in salesOrder.Items)
+                {
+                    var product = item.Product;
+                    if (product == null)
+                    {
+                        _logger.LogWarning("Product not loaded for item in order {SalesOrderId}", id);
+                        return false;
+                    }
+
+                    if (product.QuantityInStock < item.Quantity)
+                    {
+                        _logger.LogWarning("Insufficient stock for product {ProductId} when completing order {SalesOrderId}", product.Id, id);
+                        return false;
+                    }
+                }
+
+                // Deduct stock and add transactions
+                foreach (var item in salesOrder.Items)
+                {
+                    var product = item.Product!;
+                    product.QuantityInStock -= item.Quantity;
+                    product.UpdatedAt = DateTime.Now;
+                    _context.Products.Update(product);
+
+                    var tx = new StockTransaction
+                    {
+                        ProductId = product.Id,
+                        TransactionType = TransactionType.Sale,
+                        Quantity = -item.Quantity,
+                        BalanceAfter = product.QuantityInStock,
+                        Reference = $"SO: {salesOrder.OrderNumber}",
+                        Notes = "Sales order completed",
+                        TransactionDate = DateTime.Now
+                    };
+                    await _stockRepo.AddAsync(tx);
                 }
 
                 salesOrder.Status = SalesOrderStatus.Completed;
                 salesOrder.CompletedDate = DateTime.Now;
+
                 await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
 
                 _logger.LogInformation("Sales order completed: {OrderNumber}", salesOrder.OrderNumber);
                 return true;
             }
             catch (Exception ex)
             {
+                await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error completing sales order ID {SalesOrderId}", id);
                 return false;
             }
@@ -161,27 +176,22 @@ namespace InventorySystem.Services.Implementations
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var salesOrder = await _context.SalesOrders
-                    .Include(so => so.Items)
-                        .ThenInclude(soi => soi.Product)
-                    .FirstOrDefaultAsync(so => so.Id == id);
-
+                var salesOrder = await _salesRepo.GetByIdWithItemsAsync(id);
                 if (salesOrder == null || salesOrder.Status == SalesOrderStatus.Cancelled)
-                {
                     return false;
-                }
 
-                // Restore stock if order was completed
                 if (salesOrder.Status == SalesOrderStatus.Completed)
                 {
                     foreach (var item in salesOrder.Items)
                     {
                         var product = item.Product;
+                        if (product == null) continue;
+
                         product.QuantityInStock += item.Quantity;
                         product.UpdatedAt = DateTime.Now;
+                        _context.Products.Update(product);
 
-                        // Create return transaction
-                        var stockTransaction = new StockTransaction
+                        var tx = new StockTransaction
                         {
                             ProductId = product.Id,
                             TransactionType = TransactionType.Return,
@@ -191,7 +201,7 @@ namespace InventorySystem.Services.Implementations
                             Notes = "Stock returned due to order cancellation",
                             TransactionDate = DateTime.Now
                         };
-                        _context.StockTransactions.Add(stockTransaction);
+                        await _stockRepo.AddAsync(tx);
                     }
                 }
 
@@ -206,6 +216,40 @@ namespace InventorySystem.Services.Implementations
             {
                 await transaction.RollbackAsync();
                 _logger.LogError(ex, "Error cancelling sales order ID {SalesOrderId}", id);
+                return false;
+            }
+        }
+
+        // New: Delete sales order (only Pending or Cancelled)
+        public async Task<bool> DeleteSalesOrderAsync(int id)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var salesOrder = await _salesRepo.GetByIdWithItemsAsync(id);
+                if (salesOrder == null)
+                {
+                    _logger.LogWarning("Attempted to delete non-existing sales order {Id}", id);
+                    return false;
+                }
+
+                if (salesOrder.Status == SalesOrderStatus.Completed)
+                {
+                    _logger.LogWarning("Attempted to delete completed sales order {Id}", id);
+                    return false;
+                }
+
+                await _salesRepo.DeleteAsync(salesOrder);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Sales order deleted: {OrderNumber}", salesOrder.OrderNumber);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error deleting sales order ID {SalesOrderId}", id);
                 return false;
             }
         }

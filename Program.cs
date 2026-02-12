@@ -3,6 +3,8 @@ using InventorySystem.Data;
 using InventorySystem.Services.Interfaces;
 using InventorySystem.Services.Implementations;
 using System.Text.Json.Serialization;
+using InventorySystem.Repositories.Interfaces;
+using InventorySystem.Repositories.Implementations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -25,6 +27,9 @@ builder.Services.AddScoped<IProductService, ProductService>();
 builder.Services.AddScoped<IStockService, StockService>();
 builder.Services.AddScoped<IPurchaseOrderService, PurchaseOrderService>();
 builder.Services.AddScoped<ISalesOrderService, SalesOrderService>();
+builder.Services.AddScoped<ISalesOrderRepository, SalesOrderRepository>();
+builder.Services.AddScoped<IPurchaseOrderRepository, PurchaseOrderRepository>();
+builder.Services.AddScoped<IStockTransactionRepository, StockTransactionRepository>();
 
 // Configure Session
 builder.Services.AddSession(options =>

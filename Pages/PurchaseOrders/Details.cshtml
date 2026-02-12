@@ -6,25 +6,7 @@
 
 <div class="row">
     <div class="col-md-10 offset-md-1">
-        <!-- Success Message -->
-        @if (!string.IsNullOrEmpty(Model.SuccessMessage))
-        {
-            <div class="alert alert-success alert-dismissible fade show" role="alert">
-                <i class="bi bi-check-circle"></i> @Model.SuccessMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        <!-- Error Message -->
-        @if (!string.IsNullOrEmpty(Model.ErrorMessage))
-        {
-            <div class="alert alert-danger alert-dismissible fade show" role="alert">
-                <i class="bi bi-exclamation-circle"></i> @Model.ErrorMessage
-                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-            </div>
-        }
-
-        <div class="card">
+        <div class="card details-card">
             <div class="card-header">
                 <div class="d-flex justify-content-between align-items-center">
                     <h3><i class="bi bi-file-text"></i> Purchase Order Details</h3>
@@ -82,6 +64,7 @@
 
                             @if (Model.PurchaseOrder.CompletedDate.HasValue)
                             {
+
                                 <dt class="col-sm-5">Completed:</dt>
                                 <dd class="col-sm-7">@Model.PurchaseOrder.CompletedDate.Value.ToString("MM/dd/yyyy hh:mm tt")</dd>
                             }
@@ -108,46 +91,61 @@
                     <i class="bi bi-box-seam"></i> Order Items
                 </h5>
                 <div class="table-responsive">
-                    <table class="table table-bordered table-striped">
-                        <thead class="table-light">
-                            <tr>
-                                <th>Product</th>
-                                <th style="width: 15%;">Unit Price</th>
-                                <th style="width: 12%;">Quantity</th>
-                                <th style="width: 15%;">Total Price</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            @foreach (var item in Model.PurchaseOrder.Items)
-                            {
+                    @if (Model.PurchaseOrder.Items.Any())
+                    {
+                        <table class="table table-striped table-sm">
+                            <colgroup>
+                                <col style="width:60%" />
+                                <col style="width:13%" />
+                                <col style="width:13%" />
+                                <col style="width:14%" />
+                            </colgroup>
+                            <thead class="table-light">
                                 <tr>
-                                    <td>
-                                        <strong>@item.Product?.Name</strong>
-                                        @if (!string.IsNullOrEmpty(item.Product?.SKU))
-                                        {
-                                            <br />
-                                            <small class="text-muted">SKU: @item.Product.SKU</small>
-                                        }
-                                    </td>
-                                    <td class="text-end">$@item.UnitPrice.ToString("N2")</td>
-                                    <td class="text-center">@item.Quantity</td>
-                                    <td class="text-end">
-                                        <strong>$@item.TotalPrice.ToString("N2")</strong>
-                                    </td>
+                                    <th>Product</th>
+                                    <th class="text-center">Unit Price</th>
+                                    <th class="text-center">Quantity</th>
+                                    <th class="text-center">Total Price</th>
                                 </tr>
-                            }
-                        </tbody>
-                        <tfoot class="table-light">
-                            <tr>
-                                <th colspan="3" class="text-end">Total:</th>
-                                <th class="text-end">
-                                    <strong class="text-success" style="font-size: 1.1rem;">
-                                        $@Model.PurchaseOrder.Items.Sum(i => i.TotalPrice).ToString("N2")
-                                    </strong>
-                                </th>
-                            </tr>
-                        </tfoot>
-                    </table>
+                            </thead>
+                            <tbody>
+                                @foreach (var item in Model.PurchaseOrder.Items)
+                                {
+                                    <tr>
+                                        <td>
+                                            <strong>@item.Product?.Name</strong>
+                                            @if (!string.IsNullOrEmpty(item.Product?.SKU))
+                                            {
+                                                <br />
+                                                <small class="text-muted">SKU: @item.Product.SKU</small>
+                                            }
+                                        </td>
+                                        <td class="text-center">$@item.UnitPrice.ToString("N2")</td>
+                                        <td class="text-center">@item.Quantity</td>
+                                        <td class="text-center">
+                                            <strong>$@item.TotalPrice.ToString("N2")</strong>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                            <tfoot class="table-light">
+                                <tr>
+                                    <th colspan="3" class="text-end">Total:</th>
+                                    <th class="text-center">
+                                        <strong class="text-success" style="font-size: 1.1rem;">
+                                            $@Model.PurchaseOrder.Items.Sum(i => i.TotalPrice).ToString("N2")
+                                        </strong>
+                                    </th>
+                                </tr>
+                            </tfoot>
+                        </table>
+                    }
+                    else
+                    {
+                        <div class="alert alert-info" role="alert">
+                            <i class="bi bi-info-circle"></i> No items in this order.
+                        </div>
+                    }
                 </div>
 
                 <!-- Action Buttons -->
@@ -158,20 +156,28 @@
                     <div>
                         @if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Pending)
                         {
-                            <form method="post" style="display: inline;">
-                                <button type="submit" asp-page-handler="Complete" asp-route-id="@Model.PurchaseOrder.Id"
-                                        class="btn btn-success"
-                                        onclick="return confirm('Are you sure you want to complete this purchase order?');">
-                                    <i class="bi bi-check-circle"></i> Complete Order
+                            <form method="post" asp-page-handler="Complete" asp-route-id="@Model.PurchaseOrder.Id" style="display:inline;">
+                                <button type="submit" class="btn btn-success btn-sm"
+                                        onclick="return confirm('Are you sure you want to confirm this order?');">
+                                    <i class="bi bi-check-circle"></i> Confirm Order
                                 </button>
                             </form>
-                            <form method="post" style="display: inline;">
-                                <button type="submit" asp-page-handler="Cancel" asp-route-id="@Model.PurchaseOrder.Id"
-                                        class="btn btn-danger"
+                            <form method="post" asp-page-handler="Cancel" asp-route-id="@Model.PurchaseOrder.Id" style="display:inline;">
+                                <button type="submit" class="btn btn-danger btn-sm"
                                         onclick="return confirm('Are you sure you want to cancel this purchase order?');">
                                     <i class="bi bi-x-circle"></i> Cancel Order
                                 </button>
                             </form>
+                        }
+                        else if (Model.PurchaseOrder.Status == InventorySystem.Models.PurchaseOrderStatus.Completed)
+                        {
+                            @* Offer an Adjustment action that links to the stock adjustment page with PO reference.
+                               Users should record the corrective quantities there; transaction history remains. *@
+                            <a class="btn btn-warning btn-sm"
+                               href="/Stock/RemoveStock?reference=PO:@Model.PurchaseOrder.OrderNumber"
+                               title="Record Adjustment for this PO">
+                                <strong>(-)</strong> Adjustment
+                            </a>
                         }
                         else
                         {

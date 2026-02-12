@@ -1,97 +1,96 @@
 @page
-@model InventorySystem.Pages.SalesOrders.CreateModel
+@model InventorySystem.Pages.SalesOrders.EditModel
 @{
-    ViewData["Title"] = "Create Sales Order";
+    ViewData["Title"] = "Edit Sales Order";
 }
 
 <div class="row">
     <div class="col-md-10 offset-md-1">
         <div class="card">
-            <div class="card-header">
-                <h3><i class="bi bi-plus-circle"></i> Create New Sales Order</h3>
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Sales Order</h5>
             </div>
             <div class="card-body">
-                <form method="post" id="createOrderForm">
+                <form method="post" id="editSalesOrderForm">
                     <div asp-validation-summary="All" class="text-danger mb-3"></div>
 
-                    <div class="card mb-4 border-0 bg-light">
-                        <div class="card-header bg-primary text-white">
-                            <h5 class="mb-0"><i class="bi bi-person"></i> Customer Details</h5>
+                    <input asp-for="SalesOrder.Id" type="hidden" />
+                    <input asp-for="SalesOrder.OrderNumber" type="hidden" />
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Order Number</label>
+                            <p class="form-control-plaintext"><strong>@Model.SalesOrder.OrderNumber</strong></p>
                         </div>
-                        <div class="card-body">
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="CustomerName" class="form-label">Customer Name</label>
-                                    <input asp-for="CustomerName" class="form-control" placeholder="Enter customer name" />
-                                    <span asp-validation-for="CustomerName" class="text-danger"></span>
-                                </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Original Order Date</label>
+                            <p class="form-control-plaintext mb-2">@Model.SalesOrder.OrderDate.ToString("yyyy-MM-dd HH:mm")</p>
 
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="CustomerEmail" class="form-label">Email</label>
-                                    <input asp-for="CustomerEmail" class="form-control" type="email" placeholder="Enter customer email" />
-                                    <span asp-validation-for="CustomerEmail" class="text-danger"></span>
-                                </div>
-                            </div>
-
-                            <div class="row">
-                                <div class="col-md-6 mb-3">
-                                    <label asp-for="CustomerPhone" class="form-label">Phone</label>
-                                    <input asp-for="CustomerPhone" class="form-control" placeholder="Enter customer phone" />
-                                    <span asp-validation-for="CustomerPhone" class="text-danger"></span>
-                                </div>
-
-                                <div class="col-md-6 mb-3">
-                                    <label class="form-label">Order Date</label>
-                                    <input class="form-control" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" disabled />
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label asp-for="Notes" class="form-label">Notes</label>
-                                <textarea asp-for="Notes" class="form-control" rows="2" placeholder="Enter order notes (optional)"></textarea>
-                                <span asp-validation-for="Notes" class="text-danger"></span>
-                            </div>
+                            <label class="form-label">Changed Order Date</label>
+                            <input class="form-control" type="datetime-local" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" disabled />
+                            <span class="form-text text-muted">The system will apply the current date/time when you save changes.</span>
                         </div>
                     </div>
 
-                    <!-- Order Items (with Available input) -->
+                    <!-- Customer details: Name, Email, Phone -->
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <label asp-for="SalesOrder.CustomerName" class="form-label">Customer Name</label>
+                            <input asp-for="SalesOrder.CustomerName" class="form-control" />
+                            <span asp-validation-for="SalesOrder.CustomerName" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="SalesOrder.CustomerEmail" class="form-label">Email</label>
+                            <input asp-for="SalesOrder.CustomerEmail" class="form-control" />
+                            <span asp-validation-for="SalesOrder.CustomerEmail" class="text-danger"></span>
+                        </div>
+                        <div class="col-md-4">
+                            <label asp-for="SalesOrder.CustomerPhone" class="form-label">Phone</label>
+                            <input asp-for="SalesOrder.CustomerPhone" class="form-control" />
+                            <span asp-validation-for="SalesOrder.CustomerPhone" class="text-danger"></span>
+                        </div>
+                    </div>
+
                     <div class="card mt-4 mb-4">
                         <div class="card-header bg-light">
-                            <h5 class="mb-0">
-                                <i class="bi bi-box-seam"></i> Order Items
-                            </h5>
+                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order Items</h5>
                         </div>
                         <div class="card-body">
                             <div class="table-responsive">
                                 <table class="table table-bordered" id="itemsTable">
                                     <thead>
                                         <tr>
-                                            <th style="width: 35%;">Product</th>
-                                            <th style="width: 12%;">Unit Price</th>
+                                            <th style="width: 40%;">Product</th>
+                                            <th style="width: 15%;">Unit Price</th>
                                             <th style="width: 12%;">Quantity</th>
                                             <th style="width: 12%;">Available</th>
                                             <th style="width: 20%;">Total</th>
-                                            <th style="width: 9%;">Action</th>
+                                            <th style="width: 5%;">Action</th>
                                         </tr>
                                     </thead>
                                     <tbody id="itemsBody">
-                                        <!-- Rows will be added dynamically or restored from previous post -->
+                                        <!-- rows populated by JS -->
                                     </tbody>
                                 </table>
                             </div>
+
                             <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductRow()">
                                 <i class="bi bi-plus-circle"></i> Add Product Row
                             </button>
                         </div>
                     </div>
 
-                    <div class="d-flex justify-content-between mt-4">
-                        <a href="/SalesOrders" class="btn btn-secondary">
-                            <i class="bi bi-arrow-left"></i> Back to List
+                    <div class="mb-3">
+                        <label asp-for="SalesOrder.Notes" class="form-label"></label>
+                        <textarea asp-for="SalesOrder.Notes" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="SalesOrder.Notes" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-page="./Details" asp-route-id="@Model.SalesOrder.Id" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
                         </a>
-                        <button type="submit" class="btn btn-primary">
-                            <i class="bi bi-save"></i> Create Sales Order
-                        </button>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Changes</button>
                     </div>
                 </form>
             </div>
@@ -104,21 +103,19 @@
 
     <script>
         let rowCount = 0;
+        // include available quantity in the serialized products
         const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
-            Model.AllProducts.Select(p => new { id = p.Id, name = p.Name, sku = p.SKU, unitPrice = p.UnitPrice, quantity = p.QuantityInStock })
-        )) || [];
-
-        // Serialize server-side Items so we can rebuild them on validation failure
+            Model.Products.Select(p => new { id = p.Id, name = p.Name, sku = p.SKU, unitPrice = p.UnitPrice, quantity = p.QuantityInStock })
+        ));
         const initialItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
             Model.Items.Select(i => new { productId = i.ProductId, quantity = i.Quantity, unitPrice = i.UnitPrice })
-        )) || [];
+        ));
 
         document.addEventListener('DOMContentLoaded', function() {
             if (initialItems && initialItems.length > 0) {
-                // rebuild rows from the posted values so user data is preserved
                 initialItems.forEach(it => addProductRow(it));
             } else {
-                addProductRow(); // start with one empty row
+                addProductRow();
             }
         });
 
@@ -161,7 +158,7 @@
                            placeholder="0">
                 </td>
                 <td class="text-center available-cell">
-                    <input type="text" class="form-control form-control-sm available-input" readonly value="0" />
+                    <input type="text" class="form-control form-control-sm available-input" readonly />
                 </td>
                 <td>
                     <input type="text" class="form-control form-control-sm row-total"
@@ -169,7 +166,7 @@
                            value="$0.00"
                            style="background-color: #f5f5f5;">
                 </td>
-                <td>
+                <td class="text-center">
                     <button type="button" class="btn btn-danger btn-sm" onclick="removeProductRow(${rowIndex})">
                         <i class="bi bi-trash"></i>
                     </button>
@@ -178,23 +175,15 @@
 
             itemsBody.appendChild(row);
 
-            // populate select and available/unit price for restored rows
+            // set product selection and initial totals after append
             if (productVal) {
                 const select = row.querySelector('.product-select');
                 select.value = productVal;
-                const selected = products.find(p => p.id == productVal);
+                const selected = products.find(p => p.id === productVal);
                 if (selected) {
+                    // available = current stock for pending orders (edit allowed only when Pending)
                     row.querySelector('.available-input').value = selected.quantity;
-                    // when server sent unitPrice 0 or null, prefer product price
-                    const unitInput = row.querySelector('.unit-price');
-                    if (!initial.unitPrice || initial.unitPrice <= 0) {
-                        unitInput.value = selected.unitPrice.toFixed(2);
-                    }
-                } else {
-                    row.querySelector('.available-input').value = '0';
                 }
-            } else {
-                row.querySelector('.available-input').value = '0';
             }
 
             updateRowTotal(rowIndex);
@@ -204,6 +193,7 @@
             const row = document.getElementById('row_' + rowIndex);
             if (row) {
                 row.remove();
+                calculateTotal();
             }
         }
 
@@ -214,17 +204,17 @@
             const unitPriceInput = row.querySelector('.unit-price');
             const availableInput = row.querySelector('.available-input');
 
-            const option = productSelect.options[productSelect.selectedIndex];
-
-            if (option && option.value) {
-                const priceAttr = option.getAttribute('data-price');
-                const qtyAttr = option.getAttribute('data-qty');
-
-                unitPriceInput.value = priceAttr ? parseFloat(priceAttr).toFixed(2) : '0.00';
-                availableInput.value = qtyAttr ?? '0';
+            const productId = parseInt(productSelect.value);
+            if (productId) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    unitPriceInput.value = product.unitPrice.toFixed(2);
+                    availableInput.value = product.quantity;
+                } else {
+                    availableInput.value = '';
+                }
             } else {
-                unitPriceInput.value = '0.00';
-                availableInput.value = '0';
+                availableInput.value = '';
             }
 
             updateRowTotal(rowIndex);
@@ -243,6 +233,19 @@
 
             const rowTotal = unitPrice * quantity;
             rowTotalInput.value = '$' + rowTotal.toFixed(2);
+
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('#itemsBody tr');
+
+            rows.forEach(row => {
+                const rowTotalText = row.querySelector('.row-total').value;
+                const rowTotal = parseFloat(rowTotalText.replace('$', '')) || 0;
+                total += rowTotal;
+            });
         }
     </script>
 }

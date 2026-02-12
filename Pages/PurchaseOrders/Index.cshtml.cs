@@ -42,5 +42,14 @@ namespace InventorySystem.Pages.PurchaseOrders
             // Sort by order date descending
             PurchaseOrders = PurchaseOrders.OrderByDescending(o => o.OrderDate).ToList();
         }
+
+        // Handler to complete a purchase order from the index list
+        public async Task<IActionResult> OnPostCompleteAsync(int id)
+        {
+            if (id <= 0) return BadRequest();
+
+            var ok = await _purchaseOrderService.CompletePurchaseOrderAsync(id);
+            return RedirectToPage("./Index", new { statusFilter = StatusFilter });
+        }
     }
 }

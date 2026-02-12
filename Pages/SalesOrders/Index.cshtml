@@ -6,79 +6,129 @@
 
 <div class="row mb-3">
     <div class="col-md-6">
-        <h2><i class="bi bi-file-earmark-text"></i> Sales Orders</h2>
+        <h2><i class="bi bi-basket"></i> Sales Orders</h2>
     </div>
     <div class="col-md-6 text-end">
-        <a href="/SalesOrders/Create" class="btn btn-primary">
-            <i class="bi bi-plus-circle"></i> Create New Order
-        </a>
+        <a class="btn btn-primary btn-sm" href="/SalesOrders/Create"><i class="bi bi-plus-circle"></i> New Order</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-body">
+        <form method="get">
+            <div class="row g-2">
+                <div class="col-md-10">
+                    <select asp-for="StatusFilter" class="form-select">
+                        <option value="">-- All Status --</option>
+                        <option value="Pending">Pending</option>
+                        <option value="Completed">Completed</option>
+                        <option value="Cancelled">Cancelled</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-funnel"></i> Filter
+                    </button>
+                </div>
+            </div>
+        </form>
     </div>
 </div>
 
 <div class="card">
     <div class="card-body">
         <div class="table-responsive">
-            @if (Model.SalesOrders.Any())
-            {
-                <table class="table table-hover">
-                    <thead>
+            <table class="table table-hover">
+                <colgroup>
+                    <col style="width:20%" />
+                    <col style="width:25%" />
+                    <col style="width:15%" />
+                    <col style="width:10%" />
+                    <col style="width:20%" />
+                    <col style="width:10%" />
+                </colgroup>
+                <thead>
+                    <tr>
+                        <th>Order Number</th>
+                        <th>Customer</th>
+                        <th>Date</th>
+                        <th>Total</th>
+                        <th>Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    @if (Model.SalesOrders.Count == 0)
+                    {
                         <tr>
-                            <th>Order Number</th>
-                            <th>Customer</th>
-                            <th>Date</th>
-                            <th>Total</th>
-                            <th>Status</th>
-                            <th>Actions</th>
+                            <td colspan="6" class="text-center text-muted py-4">
+                                <i class="bi bi-inbox" style="font-size: 2rem;"></i>
+                                <p class="mt-2">No sales orders found.</p>
+                            </td>
                         </tr>
-                    </thead>
-                    <tbody>
-                        @foreach (var order in Model.SalesOrders.OrderByDescending(o => o.OrderDate))
+                    }
+                    else
+                    {
+                        foreach (var order in Model.SalesOrders)
                         {
                             <tr>
-                                <td>
-                                    <strong>@order.OrderNumber</strong>
-                                </td>
+                                <td><strong>@order.OrderNumber</strong></td>
                                 <td>@order.CustomerName</td>
-                                <td>@order.OrderDate.ToString("MMM dd, yyyy")</td>
-                                <td>$@order.TotalAmount.ToString("N2")</td>
+                                <td>@order.OrderDate.ToString("MM/dd/yyyy")</td>
                                 <td>
-                                    @switch (order.Status)
+                                    <strong>$@order.TotalAmount.ToString("N2")</strong>
+                                </td>
+                                <td>
+                                    @if (order.Status == InventorySystem.Models.SalesOrderStatus.Pending)
                                     {
-                                        case InventorySystem.Models.SalesOrderStatus.Pending:
-                                            <span class="badge bg-warning">Pending</span>
-                                            break;
-                                        case InventorySystem.Models.SalesOrderStatus.Completed:
-                                            <span class="badge bg-success">Completed</span>
-                                            break;
-                                        case InventorySystem.Models.SalesOrderStatus.Cancelled:
-                                            <span class="badge bg-danger">Cancelled</span>
-                                            break;
+                                        <span class="badge bg-warning text-dark"><i class="bi bi-hourglass-split"></i> Pending</span>
+                                    }
+                                    else if (order.Status == InventorySystem.Models.SalesOrderStatus.Completed)
+                                    {
+                                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> Completed</span>
+                                    }
+                                    else if (order.Status == InventorySystem.Models.SalesOrderStatus.Cancelled)
+                                    {
+                                        <span class="badge bg-danger"><i class="bi bi-x-circle"></i> Cancelled</span>
                                     }
                                 </td>
                                 <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="/SalesOrders/Details?id=@order.Id" class="btn btn-info" title="Details">
+                                    <div class="btn-group btn-group-sm" role="group">
+                                        <a asp-page="./Details" asp-route-id="@order.Id" class="btn btn-info btn-sm" title="View">
                                             <i class="bi bi-eye"></i>
                                         </a>
                                         @if (order.Status == InventorySystem.Models.SalesOrderStatus.Pending)
                                         {
-                                            <a href="/SalesOrders/Edit?id=@order.Id" class="btn btn-warning" title="Edit">
+                                            <a asp-page="./Edit" asp-route-id="@order.Id" class="btn btn-warning btn-sm" title="Edit">
                                                 <i class="bi bi-pencil"></i>
+                                            </a>
+
+                                            <form method="post" asp-page-handler="Complete" class="d-inline">
+                                                <input type="hidden" name="id" value="@order.Id" />
+                                                <input type="hidden" name="statusFilter" value="@Model.StatusFilter" />
+                                                <button type="submit" class="btn btn-success btn-sm" title="Complete Order"
+                                                        onclick="return confirm('Are you sure you want to complete this purchase order?');">
+                                                    <i class="bi bi-check"></i>
+                                                </button>
+                                            </form>
+                                        }
+
+                                        @* Delete available for Pending or Cancelled *@
+                                        @if (order.Status == InventorySystem.Models.SalesOrderStatus.Pending
+                                            || order.Status == InventorySystem.Models.SalesOrderStatus.Cancelled)
+                                        {
+                                            <a asp-page="./Delete" asp-route-id="@order.Id" class="btn btn-danger btn-sm" title="Delete"
+                                               onclick="return confirm('Delete this order? This action cannot be undone.');">
+                                                <i class="bi bi-trash"></i>
                                             </a>
                                         }
                                     </div>
                                 </td>
                             </tr>
                         }
-                    </tbody>
-                </table>
-            }
-            else
-            {
-                <div class="alert alert-info" role="alert">
-                    <i class="bi bi-info-circle"></i> No sales orders found. <a href="/SalesOrders/Create">Create your first order</a>
-                </div>
-            }
+                    }
+                </tbody>
+            </table>
         </div>
     </div>
 </div>

@@ -10,5 +10,6 @@ namespace InventorySystem.Services.Interfaces
         Task<bool> CompletePurchaseOrderAsync(int id);
         Task<bool> CancelPurchaseOrderAsync(int id);
         Task<IEnumerable<PurchaseOrder>> GetPurchaseOrdersBySupplierAsync(int supplierId);
+        Task<bool> DeletePurchaseOrderAsync(int id);
     }
 }

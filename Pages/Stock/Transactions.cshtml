@@ -87,12 +87,12 @@
                                     {
                                         case InventorySystem.Models.TransactionType.Purchase:
                                             <span class="badge bg-success">
-                                                <i class="bi bi-plus-lg"></i> Purchase
+                                                <strong>(+)</strong> Purchase
                                             </span>
                                             break;
                                         case InventorySystem.Models.TransactionType.Sale:
                                             <span class="badge bg-danger">
-                                                <i class="bi bi-dash-lg"></i> Sale
+                                                <strong>(-)</strong> Sale
                                             </span>
                                             break;
                                         case InventorySystem.Models.TransactionType.Adjustment:
@@ -108,18 +108,17 @@
                                     }
                                 </td>
                                 <td>
-                                    @if (transaction.TransactionType == InventorySystem.Models.TransactionType.Sale)
-                                    {
-                                        <span class="text-danger">
-                                            <strong>-@transaction.Quantity</strong>
-                                        </span>
+                                    @{
+                                        // Render sign marker and absolute number: "(-) 2" or "(+) 10"
+                                        var qty = transaction.Quantity;
+                                        var isNegative = qty < 0;
+                                        var qtyClass = isNegative ? "text-danger" : "text-success";
+                                        var signMarker = isNegative ? "(-)" : "(+)";
+                                        var absQty = Math.Abs(qty);
                                     }
-                                    else
-                                    {
-                                        <span class="text-success">
-                                            <strong>+@transaction.Quantity</strong>
-                                        </span>
-                                    }
+                                    <span class="@qtyClass" title="@qty">
+                                        <strong>@signMarker @absQty</strong>
+                                    </span>
                                 </td>
                                 <td>
                                     <span class="badge bg-info">@transaction.BalanceAfter</span>

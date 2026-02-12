@@ -32,8 +32,14 @@
                         <label asp-for="ProductId" class="form-label">
                             <i class="bi bi-box-seam"></i> Select Product
                         </label>
-                        <select asp-for="ProductId" class="form-select" asp-items="Model.Products" id="productSelect">
+                        <select asp-for="ProductId" class="form-select" id="productSelect">
                             <option value="">-- Select a Product --</option>
+                            @foreach (var p in Model.Products)
+                            {
+                                <option value="@p.Id" data-current-stock="@p.QuantityInStock" data-minimum-level="@p.MinimumStockLevel">
+                                    @p.Name @if(!string.IsNullOrEmpty(p.SKU)){ <text>(SKU: @p.SKU)</text> }
+                                </option>
+                            }
                         </select>
                         <span asp-validation-for="ProductId" class="text-danger small"></span>
                     </div>
@@ -83,13 +89,23 @@
 @section Scripts {
     <partial name="_ValidationScriptsPartial" />
     <script>
-        document.getElementById('productSelect').addEventListener('change', function() {
-            var selectedOption = this.options[this.selectedIndex];
-            var currentStock = selectedOption.getAttribute('data-current-stock') || '0';
-            var minimumLevel = selectedOption.getAttribute('data-minimum-level') || '0';
+        var productSelect = document.getElementById('productSelect');
+        function updateStockFields() {
+            var selectedOption = productSelect.options[productSelect.selectedIndex];
+            var currentStock = selectedOption ? selectedOption.getAttribute('data-current-stock') || '0' : '0';
+            var minimumLevel = selectedOption ? selectedOption.getAttribute('data-minimum-level') || '0' : '0';
 
             document.getElementById('currentStock').value = currentStock;
             document.getElementById('minimumLevel').value = minimumLevel;
+        }
+
+        productSelect.addEventListener('change', updateStockFields);
+
+        // Populate fields on page load if a product is already selected (e.g., after validation errors or query param)
+        document.addEventListener('DOMContentLoaded', function () {
+            if (productSelect.value) {
+                updateStockFields();
+            }
         });
     </script>
 }

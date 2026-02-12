@@ -1,0 +1,237 @@
+@page
+@model InventorySystem.Pages.PurchaseOrders.EditModel
+@{
+    ViewData["Title"] = "Edit Purchase Order";
+}
+
+<div class="row">
+    <div class="col-md-10 offset-md-1">
+        <div class="card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0"><i class="bi bi-pencil-square"></i> Edit Purchase Order</h5>
+            </div>
+            <div class="card-body">
+                @* show TempData messages *@
+                @if (TempData["SuccessMessage"] != null)
+                {
+                    <div class="alert alert-success">@TempData["SuccessMessage"]</div>
+                }
+                @if (TempData["ErrorMessage"] != null)
+                {
+                    <div class="alert alert-danger">@TempData["ErrorMessage"]</div>
+                }
+
+                <form method="post" id="editPurchaseOrderForm">
+                    <div asp-validation-summary="All" class="text-danger mb-3"></div>
+
+                    <input asp-for="PurchaseOrder.Id" type="hidden" />
+                    @* preserve OrderNumber so it is available on POST and visible *@
+                    <input asp-for="PurchaseOrder.OrderNumber" type="hidden" />
+
+                    <div class="row mb-3">
+                        <div class="col-md-6">
+                            <label class="form-label">Order Number</label>
+                            <p class="form-control-plaintext"><strong>@(string.IsNullOrWhiteSpace(Model.PurchaseOrder.OrderNumber) ? "N/A (missing)" : Model.PurchaseOrder.OrderNumber)</strong></p>
+                        </div>
+                        <div class="col-md-6">
+                            <label class="form-label">Original Order Date</label>
+                            <p class="form-control-plaintext mb-2">@Model.PurchaseOrder.OrderDate.ToString("yyyy-MM-dd HH:mm")</p>
+
+                            <label class="form-label">Changed Order Date</label>
+                            <input class="form-control" type="datetime-local" value="@DateTime.Now.ToString("yyyy-MM-ddTHH:mm")" disabled />
+                            <span class="form-text text-muted">The system will apply the current date/time when you save changes.</span>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PurchaseOrder.SupplierId" class="form-label"></label>
+                        <select asp-for="PurchaseOrder.SupplierId" class="form-select" asp-items="Model.Suppliers">
+                            <option value="">-- Select Supplier --</option>
+                        </select>
+                        <span asp-validation-for="PurchaseOrder.SupplierId" class="text-danger"></span>
+                    </div>
+
+                    <div class="card mt-4 mb-4">
+                        <div class="card-header bg-light">
+                            <h5 class="mb-0"><i class="bi bi-box-seam"></i> Order Items</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="table-responsive">
+                                <table class="table table-bordered" id="itemsTable">
+                                    <thead>
+                                        <tr>
+                                            <th style="width: 40%;">Product</th>
+                                            <th style="width: 15%;">Unit Price</th>
+                                            <th style="width: 15%;">Quantity</th>
+                                            <th style="width: 20%;">Total</th>
+                                            <th style="width: 10%;">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="itemsBody">
+                                        <!-- rows populated by JS from Model.Items on load -->
+                                    </tbody>
+                                </table>
+                            </div>
+
+                            <button type="button" class="btn btn-outline-primary btn-sm" onclick="addProductRow()">
+                                <i class="bi bi-plus-circle"></i> Add Product Row
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label asp-for="PurchaseOrder.Notes" class="form-label"></label>
+                        <textarea asp-for="PurchaseOrder.Notes" class="form-control" rows="3"></textarea>
+                        <span asp-validation-for="PurchaseOrder.Notes" class="text-danger"></span>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a asp-page="./Details" asp-route-id="@Model.PurchaseOrder.Id" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Back
+                        </a>
+                        <button type="submit" class="btn btn-primary"><i class="bi bi-save"></i> Save Changes</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+
+    <script>
+        let rowCount = 0;
+        const products = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Products.Select(p => new { id = p.Id, name = p.Name, sku = p.SKU, unitPrice = p.UnitPrice })
+        ));
+        const initialItems = @Html.Raw(System.Text.Json.JsonSerializer.Serialize(
+            Model.Items.Select(i => new { productId = i.ProductId, quantity = i.Quantity, unitPrice = i.UnitPrice })
+        ));
+
+        document.addEventListener('DOMContentLoaded', function() {
+            if (initialItems && initialItems.length > 0) {
+                initialItems.forEach(it => addProductRow(it));
+            } else {
+                addProductRow();
+            }
+            calculateTotal();
+        });
+
+        function addProductRow(initial = null) {
+            const itemsBody = document.getElementById('itemsBody');
+            const rowIndex = rowCount++;
+
+            const row = document.createElement('tr');
+            row.id = 'row_' + rowIndex;
+
+            let productOptions = '<option value="">-- Select Product --</option>';
+            products.forEach(product => {
+                productOptions += `<option value="${product.id}" data-price="${product.unitPrice}">${product.name} (SKU: ${product.sku || 'N/A'})</option>`;
+            });
+
+            const unitPriceVal = initial ? (initial.unitPrice ?? 0).toFixed(2) : '0.00';
+            const quantityVal = initial ? (initial.quantity ?? 0) : 0;
+            const productVal = initial ? initial.productId : '';
+
+            row.innerHTML = `
+                <td>
+                    <select class="form-select form-select-sm product-select"
+                            name="Items[${rowIndex}].ProductId"
+                            onchange="onProductChange(${rowIndex})">
+                        ${productOptions}
+                    </select>
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm unit-price"
+                           name="Items[${rowIndex}].UnitPrice"
+                           step="0.01" min="0" value="${unitPriceVal}"
+                           onchange="updateRowTotal(${rowIndex})"
+                           placeholder="0.00">
+                </td>
+                <td>
+                    <input type="number" class="form-control form-control-sm quantity"
+                           name="Items[${rowIndex}].Quantity"
+                           min="0" value="${quantityVal}"
+                           onchange="updateRowTotal(${rowIndex})"
+                           placeholder="0">
+                </td>
+                <td>
+                    <input type="text" class="form-control form-control-sm row-total"
+                           readonly
+                           value="$0.00"
+                           style="background-color: #f5f5f5;">
+                </td>
+                <td>
+                    <button type="button" class="btn btn-danger btn-sm" onclick="removeProductRow(${rowIndex})">
+                        <i class="bi bi-trash"></i>
+                    </button>
+                </td>
+            `;
+
+            itemsBody.appendChild(row);
+
+            if (productVal) {
+                const select = row.querySelector('.product-select');
+                select.value = productVal;
+            }
+
+            updateRowTotal(rowIndex);
+        }
+
+        function removeProductRow(rowIndex) {
+            const row = document.getElementById('row_' + rowIndex);
+            if (row) {
+                row.remove();
+                calculateTotal();
+            }
+        }
+
+        function onProductChange(rowIndex) {
+            const row = document.getElementById('row_' + rowIndex);
+            if (!row) return;
+            const productSelect = row.querySelector('.product-select');
+            const unitPriceInput = row.querySelector('.unit-price');
+
+            const productId = parseInt(productSelect.value);
+            if (productId) {
+                const product = products.find(p => p.id === productId);
+                if (product) {
+                    unitPriceInput.value = product.unitPrice.toFixed(2);
+                }
+            }
+
+            updateRowTotal(rowIndex);
+        }
+
+        function updateRowTotal(rowIndex) {
+            const row = document.getElementById('row_' + rowIndex);
+            if (!row) return;
+
+            const unitPriceInput = row.querySelector('.unit-price');
+            const quantityInput = row.querySelector('.quantity');
+            const rowTotalInput = row.querySelector('.row-total');
+
+            const unitPrice = parseFloat(unitPriceInput.value) || 0;
+            const quantity = parseInt(quantityInput.value) || 0;
+
+            const rowTotal = unitPrice * quantity;
+            rowTotalInput.value = '$' + rowTotal.toFixed(2);
+
+            calculateTotal();
+        }
+
+        function calculateTotal() {
+            let total = 0;
+            const rows = document.querySelectorAll('#itemsBody tr');
+
+            rows.forEach(row => {
+                const rowTotalText = row.querySelector('.row-total').value;
+                const rowTotal = parseFloat(rowTotalText.replace('$', '')) || 0;
+                total += rowTotal;
+            });
+
+            // optionally display total somewhere
+        }
+    </script>
+}

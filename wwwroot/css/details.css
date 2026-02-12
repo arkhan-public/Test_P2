@@ -1,0 +1,107 @@
+/* Styles specifically for PurchaseOrder/SalesOrder details parity */
+.details-card .card-header h3 {
+    margin: 0;
+    font-size: 1.05rem;
+    font-weight: 600;
+    color: #2c3e50;
+}
+.details-card .card-header .badge {
+    font-size: 0.85rem;
+    padding: 0.35rem 0.6rem;
+}
+
+/* Base typography and spacing for the details card body */
+.details-card .card-body {
+    font-size: 0.95rem;
+    line-height: 1.45;
+    color: #343a40;
+}
+
+/* Labels and values in dl pairs */
+.details-card .card-body dl dt {
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-weight: 600;
+    margin-bottom: 0.125rem;
+}
+.details-card .card-body dl dd {
+    font-size: 1rem;
+    margin-left: 0;
+    margin-bottom: 0.5rem;
+}
+
+/* Make the two summary columns align to the same vertical center
+   so rows show consistent height across the two columns. */
+.details-card .card-body > .row.mb-4 > .col-md-6 {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+/* Normalize strong usage inside header values so its size doesn't blow out row height */
+.details-card .card-body dl dd strong {
+    font-size: 1rem;
+    font-weight: 700;
+}
+
+/* Table sizing and padding */
+.details-card .table {
+    font-size: 0.95rem;
+}
+.details-card .table th,
+.details-card .table td {
+    vertical-align: middle;
+    padding: 0.45rem 0.6rem;
+}
+
+/* Use reduced padding for compact item lists (table-sm already used in Sales) */
+.details-card .table-sm th,
+.details-card .table-sm td {
+    padding: 0.35rem 0.5rem;
+}
+
+/* Center numeric columns and avoid wrapping that might increase height unnecessarily */
+.details-card .table .text-center {
+    white-space: nowrap;
+}
+
+/* Buttons */
+.details-card .btn {
+    font-size: 0.92rem;
+    padding: 0.38rem 0.75rem;
+}
+
+/* Responsive adjustments for details card */
+@media (max-width: 576px) {
+    .details-card .card-body dl dt { font-size: 0.82rem; }
+    .details-card .card-body dl dd { font-size: 0.95rem; }
+    .details-card .table { font-size: 0.9rem; }
+    .details-card .btn { font-size: 0.88rem; padding: 0.35rem 0.6rem; }
+
+    /* Stack header columns on small screens and keep reasonable spacing */
+    .details-card .card-body > .row.mb-4 > .col-md-6 {
+        justify-content: flex-start;
+        margin-bottom: 0.5rem;
+    }
+}
+
+/* Normalize Notes (alert) typography inside details-card */
+.details-card .card-body > .alert,
+.details-card .card-body .alert {
+    font-size: 1rem !important;
+    line-height: 1.45 !important;
+    color: #343a40 !important;
+    padding: 0.6rem 0.75rem !important;
+    margin-bottom: 1rem !important;
+}
+
+.details-card .card-body .alert > strong,
+.details-card .card-body .alert > .mb-0,
+.details-card .card-body .alert p {
+    font-size: 1rem !important;
+    line-height: 1.45 !important;
+    margin: 0 !important;
+}
+
+/* If one page still uses different markup, normalize inner elements */
+.details-card .card-body .alert i { margin-right: 0.35rem; }

@@ -1,5 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
+using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace InventorySystem.Models
 {
@@ -18,6 +20,8 @@ namespace InventorySystem.Models
         [StringLength(50)]
         public string OrderNumber { get; set; } = string.Empty;
 
+        // Validate the foreign-key only (database stores SupplierId)
+        [Required(ErrorMessage = "Supplier is required")]
         public int SupplierId { get; set; }
 
         public DateTime OrderDate { get; set; } = DateTime.Now;
@@ -32,8 +36,9 @@ namespace InventorySystem.Models
 
         public DateTime? CompletedDate { get; set; }
 
-        // Navigation properties
+        // Prevent model binding/validation on the navigation property
         [ForeignKey("SupplierId")]
+        [ValidateNever]
         public virtual Supplier Supplier { get; set; } = null!;
 
         public virtual ICollection<PurchaseOrderItem> Items { get; set; } = new List<PurchaseOrderItem>();

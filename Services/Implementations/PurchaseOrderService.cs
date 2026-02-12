@@ -1,6 +1,8 @@
+using System.Linq;
 using Microsoft.EntityFrameworkCore;
 using InventorySystem.Data;
 using InventorySystem.Models;
+using InventorySystem.Repositories.Interfaces;
 using InventorySystem.Services.Interfaces;
 
 namespace InventorySystem.Services.Implementations
@@ -8,11 +10,19 @@ namespace InventorySystem.Services.Implementations
     public class PurchaseOrderService : IPurchaseOrderService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IPurchaseOrderRepository _purchaseRepo;
+        private readonly IStockTransactionRepository _stockRepo;
         private readonly ILogger<PurchaseOrderService> _logger;
 
-        public PurchaseOrderService(ApplicationDbContext context, ILogger<PurchaseOrderService> logger)
+        public PurchaseOrderService(
+            ApplicationDbContext context,
+            IPurchaseOrderRepository purchaseRepo,
+            IStockTransactionRepository stockRepo,
+            ILogger<PurchaseOrderService> logger)
         {
             _context = context;
+            _purchaseRepo = purchaseRepo;
+            _stockRepo = stockRepo;
             _logger = logger;
         }
 
@@ -20,12 +30,7 @@ namespace InventorySystem.Services.Implementations
         {
             try
             {
-                return await _context.PurchaseOrders
-                    .Include(po => po.Supplier)
-                    .Include(po => po.Items)
-                        .ThenInclude(poi => poi.Product)
-                    .OrderByDescending(po => po.OrderDate)
-                    .ToListAsync();
+                return await _purchaseRepo.GetAllWithItemsAsync();
             }
             catch (Exception ex)
             {
@@ -38,11 +43,7 @@ namespace InventorySystem.Services.Implementations
         {
             try
             {
-                return await _context.PurchaseOrders
-                    .Include(po => po.Supplier)
-                    .Include(po => po.Items)
-                        .ThenInclude(poi => poi.Product)
-                    .FirstOrDefaultAsync(po => po.Id == id);
+                return await _purchaseRepo.GetByIdWithItemsAsync(id);
             }
             catch (Exception ex)
             {
@@ -56,12 +57,10 @@ namespace InventorySystem.Services.Implementations
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                // Generate order number
                 purchaseOrder.OrderNumber = $"PO-{DateTime.Now:yyyyMMdd}-{new Random().Next(1000, 9999)}";
                 purchaseOrder.OrderDate = DateTime.Now;
                 purchaseOrder.Status = PurchaseOrderStatus.Pending;
 
-                // Calculate total
                 decimal total = 0;
                 foreach (var item in items)
                 {
@@ -70,14 +69,13 @@ namespace InventorySystem.Services.Implementations
                 }
                 purchaseOrder.TotalAmount = total;
 
-                _context.PurchaseOrders.Add(purchaseOrder);
+                await _purchaseRepo.AddAsync(purchaseOrder);
                 await _context.SaveChangesAsync();
 
-                // Add items
                 foreach (var item in items)
                 {
                     item.PurchaseOrderId = purchaseOrder.Id;
-                    _context.PurchaseOrderItems.Add(item);
+                    await _purchaseRepo.AddItemAsync(item);
                 }
                 await _context.SaveChangesAsync();
 
@@ -98,10 +96,7 @@ namespace InventorySystem.Services.Implementations
             using var transaction = await _context.Database.BeginTransactionAsync();
             try
             {
-                var purchaseOrder = await _context.PurchaseOrders
-                    .Include(po => po.Items)
-                        .ThenInclude(poi => poi.Product)
-                    .FirstOrDefaultAsync(po => po.Id == id);
+                var purchaseOrder = await _purchaseRepo.GetByIdWithItemsAsync(id);
 
                 if (purchaseOrder == null || purchaseOrder.Status != PurchaseOrderStatus.Pending)
                 {
@@ -113,21 +108,24 @@ namespace InventorySystem.Services.Implementations
                 foreach (var item in purchaseOrder.Items)
                 {
                     var product = item.Product;
+                    if (product == null) continue;
+
                     product.QuantityInStock += item.Quantity;
                     product.UpdatedAt = DateTime.Now;
+                    _context.Products.Update(product);
 
                     // Create stock transaction
-                    var stockTransaction = new StockTransaction
+                    var tx = new StockTransaction
                     {
                         ProductId = product.Id,
                         TransactionType = TransactionType.Purchase,
                         Quantity = item.Quantity,
                         BalanceAfter = product.QuantityInStock,
                         Reference = $"PO: {purchaseOrder.OrderNumber}",
-                        Notes = $"Purchase order completed",
+                        Notes = "Purchase order completed",
                         TransactionDate = DateTime.Now
                     };
-                    _context.StockTransactions.Add(stockTransaction);
+                    await _stockRepo.AddAsync(tx);
                 }
 
                 purchaseOrder.Status = PurchaseOrderStatus.Completed;
@@ -151,7 +149,7 @@ namespace InventorySystem.Services.Implementations
         {
             try
             {
-                var purchaseOrder = await _context.PurchaseOrders.FindAsync(id);
+                var purchaseOrder = await _purchaseRepo.GetByIdWithItemsAsync(id);
                 if (purchaseOrder == null || purchaseOrder.Status != PurchaseOrderStatus.Pending)
                 {
                     return false;
@@ -170,17 +168,46 @@ namespace InventorySystem.Services.Implementations
             }
         }
 
+        public async Task<bool> DeletePurchaseOrderAsync(int id)
+        {
+            using var transaction = await _context.Database.BeginTransactionAsync();
+            try
+            {
+                var purchaseOrder = await _purchaseRepo.GetByIdWithItemsAsync(id);
+                if (purchaseOrder == null)
+                {
+                    _logger.LogWarning("Attempted to delete non-existing purchase order {Id}", id);
+                    return false;
+                }
+
+                if (purchaseOrder.Status == PurchaseOrderStatus.Completed)
+                {
+                    _logger.LogWarning("Attempted to delete completed purchase order {Id}", id);
+                    return false;
+                }
+
+                await _purchaseRepo.DeleteAsync(purchaseOrder);
+                await _context.SaveChangesAsync();
+                await transaction.CommitAsync();
+
+                _logger.LogInformation("Purchase order deleted: {OrderNumber}", purchaseOrder.OrderNumber);
+                return true;
+            }
+            catch (Exception ex)
+            {
+                await transaction.RollbackAsync();
+                _logger.LogError(ex, "Error deleting purchase order ID {PurchaseOrderId}", id);
+                return false;
+            }
+        }
+
         public async Task<IEnumerable<PurchaseOrder>> GetPurchaseOrdersBySupplierAsync(int supplierId)
         {
             try
             {
-                return await _context.PurchaseOrders
-                    .Include(po => po.Supplier)
-                    .Include(po => po.Items)
-                        .ThenInclude(poi => poi.Product)
-                    .Where(po => po.SupplierId == supplierId)
-                    .OrderByDescending(po => po.OrderDate)
-                    .ToListAsync();
+                var all = await _purchaseRepo.GetAllWithItemsAsync();
+                return all.Where(po => po.SupplierId == supplierId)
+                          .OrderByDescending(po => po.OrderDate);
             }
             catch (Exception ex)
             {

@@ -1,0 +1,57 @@
+﻿@page
+@model InventorySystem.Pages.PurchaseOrders.DeleteModel
+@{
+    ViewData["Title"] = "Delete Purchase Order";
+}
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h3><i class="bi bi-trash"></i> Delete Purchase Order</h3>
+            </div>
+            <div class="card-body">
+                @if (Model.PurchaseOrder == null)
+                {
+                    <div class="alert alert-danger">Purchase order not found.</div>
+                    <a href="/PurchaseOrders" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Are you sure you want to delete purchase order
+                        <strong>@Model.PurchaseOrder.OrderNumber</strong>?
+                        This action cannot be undone.
+                    </div>
+
+                    <dl class="row">
+                        <dt class="col-sm-4">Supplier:</dt>
+                        <dd class="col-sm-8">@Model.PurchaseOrder.Supplier?.Name</dd>
+
+                        <dt class="col-sm-4">Date:</dt>
+                        <dd class="col-sm-8">@Model.PurchaseOrder.OrderDate.ToString("MM/dd/yyyy hh:mm tt")</dd>
+
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">@Model.PurchaseOrder.Status.ToString()</dd>
+
+                        <dt class="col-sm-4">Total:</dt>
+                        <dd class="col-sm-8">$@Model.PurchaseOrder.TotalAmount.ToString("N2")</dd>
+                    </dl>
+
+                    <form method="post">
+                        <input type="hidden" name="id" value="@Model.PurchaseOrder.Id" />
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="./Details" asp-route-id="@Model.PurchaseOrder.Id" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,57 @@
+﻿@page
+@model InventorySystem.Pages.SalesOrders.DeleteModel
+@{
+    ViewData["Title"] = "Delete Sales Order";
+}
+
+<div class="row">
+    <div class="col-md-6 offset-md-3">
+        <div class="card border-danger">
+            <div class="card-header bg-danger text-white">
+                <h3><i class="bi bi-trash"></i> Delete Sales Order</h3>
+            </div>
+            <div class="card-body">
+                @if (Model.SalesOrder == null)
+                {
+                    <div class="alert alert-danger">Sales order not found.</div>
+                    <a href="/SalesOrders" class="btn btn-secondary"><i class="bi bi-arrow-left"></i> Back to List</a>
+                }
+                else
+                {
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        Are you sure you want to delete sales order
+                        <strong>@Model.SalesOrder.OrderNumber</strong>?
+                        This action cannot be undone.
+                    </div>
+
+                    <dl class="row">
+                        <dt class="col-sm-4">Customer:</dt>
+                        <dd class="col-sm-8">@Model.SalesOrder.CustomerName</dd>
+
+                        <dt class="col-sm-4">Date:</dt>
+                        <dd class="col-sm-8">@Model.SalesOrder.OrderDate.ToString("MM/dd/yyyy hh:mm tt")</dd>
+
+                        <dt class="col-sm-4">Status:</dt>
+                        <dd class="col-sm-8">@Model.SalesOrder.Status.ToString()</dd>
+
+                        <dt class="col-sm-4">Total:</dt>
+                        <dd class="col-sm-8">$@Model.SalesOrder.TotalAmount.ToString("N2")</dd>
+                    </dl>
+
+                    <form method="post">
+                        <input type="hidden" name="id" value="@Model.SalesOrder.Id" />
+                        <div class="d-flex justify-content-between">
+                            <a asp-page="./Details" asp-route-id="@Model.SalesOrder.Id" class="btn btn-secondary">
+                                <i class="bi bi-arrow-left"></i> Cancel
+                            </a>
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-trash"></i> Delete
+                            </button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+</div>

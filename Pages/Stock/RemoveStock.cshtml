@@ -32,8 +32,20 @@
                         <label asp-for="ProductId" class="form-label">
                             <i class="bi bi-box-seam"></i> Select Product
                         </label>
-                        <select asp-for="ProductId" class="form-select" asp-items="Model.Products" id="productSelect">
+                        <select asp-for="ProductId" class="form-select" id="productSelect">
                             <option value="">-- Select a Product --</option>
+                            @foreach (var p in Model.Products)
+                            {
+                                // Build the option attributes and display text inside the foreach code block (no extra "@{" here)
+                                var attrs = $"value=\"{p.Id}\" data-current-stock=\"{p.QuantityInStock}\" data-minimum-level=\"{p.MinimumStockLevel}\"";
+                                if (p.QuantityInStock == 0) attrs += " disabled";
+                                if (Model.ProductId == p.Id) attrs += " selected";
+
+                                var skuPart = string.IsNullOrEmpty(p.SKU) ? "" : $" (SKU: {p.SKU})";
+                                var display = $"{p.Name}{skuPart} - Stock: {p.QuantityInStock}";
+
+                                @Html.Raw($"<option {attrs}>{System.Net.WebUtility.HtmlEncode(display)}</option>")
+                            }
                         </select>
                         <span asp-validation-for="ProductId" class="text-danger small"></span>
                     </div>
@@ -103,14 +115,34 @@
         const additionalNotesDiv = document.getElementById('additionalNotesDiv');
         const warningText = document.getElementById('warningText');
 
-        productSelect.addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const currentStock = selectedOption.getAttribute('data-current-stock') || '0';
-            const minimumLevel = selectedOption.getAttribute('data-minimum-level') || '0';
+        function updateStockFields() {
+            const selectedOption = productSelect.options[productSelect.selectedIndex];
+            const currentStock = selectedOption ? parseInt(selectedOption.getAttribute('data-current-stock') || '0', 10) : 0;
+            const minimumLevel = selectedOption ? selectedOption.getAttribute('data-minimum-level') || '0' : '0';
 
             document.getElementById('currentStock').value = currentStock;
             document.getElementById('minimumLevel').value = minimumLevel;
-            updateWarningMessage(parseInt(currentStock));
+            updateWarningMessage(currentStock);
+        }
+
+        function updateWarningMessage(currentStock) {
+            const quantityInput = document.querySelector('input[name="Quantity"]');
+            const quantity = quantityInput ? parseInt(quantityInput.value || '0', 10) : 0;
+
+            if (quantity > currentStock) {
+                warningText.textContent = 'Warning: Quantity exceeds current stock!';
+                warningText.className = 'form-text text-warning';
+            } else if (currentStock <= parseInt(document.getElementById('minimumLevel').value || '0', 10)) {
+                warningText.textContent = 'Note: Product is at or below minimum stock level.';
+                warningText.className = 'form-text text-muted';
+            } else {
+                warningText.textContent = '';
+                warningText.className = 'form-text text-muted';
+            }
+        }
+
+        productSelect.addEventListener('change', function () {
+            updateStockFields();
         });
 
         reasonSelect.addEventListener('change', function() {
@@ -121,26 +153,22 @@
             }
         });
 
-        function updateWarningMessage(currentStock) {
-            const quantityInput = document.querySelector('input[name="Quantity"]');
-            if (quantityInput && quantityInput.value) {
-                const quantity = parseInt(quantityInput.value) || 0;
-                if (quantity > currentStock) {
-                    warningText.textContent = 'Warning: Quantity exceeds current stock!';
-                    warningText.className = 'form-text text-warning';
-                } else {
-                    warningText.textContent = '';
-                    warningText.className = 'form-text text-muted';
-                }
-            }
-        }
-
         document.addEventListener('input', function(e) {
-            if (e.target.name === 'Quantity') {
+            if (e.target && e.target.name === 'Quantity') {
                 const currentStockInput = document.getElementById('currentStock');
-                if (currentStockInput.value) {
-                    updateWarningMessage(parseInt(currentStockInput.value));
-                }
+                const current = currentStockInput && currentStockInput.value ? parseInt(currentStockInput.value, 10) : 0;
+                updateWarningMessage(current);
+            }
+        });
+
+        document.addEventListener('DOMContentLoaded', function () {
+            if (productSelect && productSelect.value) {
+                updateStockFields();
+            }
+            const notesValue = '@(Model.Notes ?? "")';
+            if (notesValue && reasonSelect) {
+                reasonSelect.value = notesValue;
+                if (notesValue === 'Other') additionalNotesDiv.style.display = 'block';
             }
         });
     </script>
